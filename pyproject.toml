@@ -20,6 +20,7 @@ include = ["storage_visualizer*"]
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+extend-exclude = ["docs"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
