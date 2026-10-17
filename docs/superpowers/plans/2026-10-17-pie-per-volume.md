@@ -336,7 +336,7 @@ Expected: FAIL with `ModuleNotFoundError`
 - [ ] **Step 4: Implement `PieWidget`** following the spec's pie_widget.py section:
   - `setFixedSize(140, 170)`; a 120 px pie centred in the top 140×140, and the label in the strip below, elided with `QFontMetrics.elidedText(..., Qt.ElideMiddle, width)`.
   - Module colour constants: `USED_COLOR`, `FREE_COLOR`, `RING_COLOR`, `UNAVAILABLE_COLOR`, `TEXT_COLOR`.
-  - Angles: `drawPie` uses 1/16°. Start at `90 * 16` (12 o'clock); a negative span goes clockwise. The used span is `-round(5760 * used / (used + free))`, and the free slice fills the rest.
+  - Angles: `drawPie` uses 1/16°. Start at `90 * 16` (12 o'clock); a negative span goes clockwise. The used span is `-round(5760 * used / (used + free))`, and the free slice fills the rest. Guard it the same way as `used_percent`: when `used + free == 0`, the used span is 0 (no used slice drawn, no division), and only the free slice is drawn.
   - States: loading (`volume is None`) is the ring with "…"; ok is the slices with `f"{used_percent(used, free)}%"`; unavailable is a grey disc with "unavailable".
   - Label text is `volume.label` if set, else the constructor's `mount_point`.
 
@@ -439,10 +439,10 @@ There's no automated test: `main()` runs the event loop. The spec covers it with
 Run: `.venv/bin/pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=100 && .venv/bin/ruff check . && .venv/bin/ruff format --check .`
 Expected: all pass, core 100%.
 
-- [ ] **Step 3: Manual check (`docs/TESTING.md`, first checklist line)**
+- [ ] **Step 3: Manual check (`docs/TESTING.md`, first checklist line), run by the human**
 
-Run: `.venv/bin/python -m storage_visualizer` (on the real desktop, not offscreen) and `df -h / /mnt/backup` side by side.
-Expected: a window titled "Storage" with exactly two pies, `/` and `/mnt/backup`; each centre percent equals df's `Use%`; no `/boot/efi`; no traceback in the terminal. Also run `.venv/bin/storage-visualizer` once to confirm the console script works. Record the result (pass/fail per line, the other lines N/A) in the commit body.
+**Do not run the GUI yourself, and subagents must not attempt this step.** It blocks in `app.exec()` and the window can't be seen from here. Stop here and ask the human to run `.venv/bin/python -m storage_visualizer` and `.venv/bin/storage-visualizer` alongside `df -h / /mnt/backup`, then wait for their pass/fail report.
+Expected (for the human to confirm): a window titled "Storage" with exactly two pies, `/` and `/mnt/backup`; each centre percent equals df's `Use%`; no `/boot/efi`; no traceback in the terminal; the console script starts the same app. Put their report (pass/fail per line, the other checklist lines N/A) in the Step 4 commit body.
 
 - [ ] **Step 4: Commit**
 
