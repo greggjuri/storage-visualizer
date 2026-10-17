@@ -166,7 +166,7 @@ Rules, applied in this order:
 - `set_volume(volume)` stores the volume and calls `update()`.
 - `paintEvent` uses QPainter with antialiasing and draws one of three states:
   - **loading** (`volume is None`): grey outline ring, "…" in the centre
-  - **ok**: the used slice in an accent colour from 12 o'clock clockwise, the free slice in light grey, and the used percent (rounded integer) in the centre. Slices and percent are computed against `used + free`, which is df's Use% formula, not against `total`. Blocks reserved for root are left out of the pie, so the percent matches `df -h`. `Volume.total` stays in the model unchanged. If `used + free == 0`, the pie shows 0%.
+  - **ok**: the used slice in an accent colour from 12 o'clock clockwise, the free slice in light grey, and the used percent in the centre, rounded up to an integer with `math.ceil` to match df's Use%. Slices and percent are computed against `used + free`, which is df's Use% formula, not against `total`. Blocks reserved for root are left out of the pie, so the percent matches `df -h`. `Volume.total` stays in the model unchanged. If `used + free == 0`, the pie shows 0%.
   - **unavailable**: solid grey disc with "unavailable" in the centre
 - Under the pie: the label (the volume's label once known, otherwise the mount point), elided to the widget width.
 - Colours are module constants; no theming.
