@@ -253,3 +253,78 @@ A custom `PieWidget` painting two arcs with `QPainter`, plus labels.
 
 ### References
 - Planning chat, 2026-10-17; settle in brainstorming for the first feature
+
+---
+
+## Template for New Decisions
+
+```markdown
+## ADR-XXX: Title
+
+**Date**: YYYY-MM-DD  
+**Status**: Proposed/Accepted/Deprecated/Superseded
+
+### Context
+What is the issue that we're seeing that is motivating this decision?
+
+### Decision
+What is the change that we're proposing and/or doing?
+
+### Rationale
+Why is this the best choice? What alternatives were considered?
+
+### Alternatives Considered (optional)
+| Option | Pros | Cons | Verdict |
+|--------|------|------|---------|
+| Option A | ... | ... | Selected/Rejected |
+
+### Consequences
+What becomes easier or more difficult because of this change?
+
+**Positive:**
+- Benefit 1
+- Benefit 2
+
+**Negative:**
+- Tradeoff 1
+- Tradeoff 2
+
+### References (optional)
+- Spec: `docs/superpowers/specs/YYYY-MM-DD-xxx-design.md`
+- Plan: `docs/superpowers/plans/YYYY-MM-DD-xxx.md`
+- External: [link]
+```
+
+---
+
+## ADR Status Definitions
+
+| Status | Meaning |
+|--------|---------|
+| **Proposed** | Under discussion, not yet approved |
+| **Accepted** | Approved and in effect |
+| **Deprecated** | No longer recommended, but may still be in use |
+| **Superseded** | Replaced by another ADR (link to replacement) |
+
+## When to Create an ADR
+
+Create an ADR when:
+- Choosing between multiple valid approaches
+- Making a decision that's hard to reverse
+- Setting a pattern others should follow
+- Explicitly rejecting an approach
+- Learning something that changes future decisions
+
+## ADR Numbering
+
+- Use sequential numbers: ADR-001, ADR-002, etc.
+- Never reuse numbers, even for superseded ADRs
+- Reference superseded ADRs: "Supersedes ADR-003"
+
+## Key Principles Captured in ADRs
+
+{As you make decisions, summarize key principles here}
+
+1. **{Principle 1}**: {Brief explanation}
+2. **{Principle 2}**: {Brief explanation}
+3. **{Principle 3}**: {Brief explanation}
