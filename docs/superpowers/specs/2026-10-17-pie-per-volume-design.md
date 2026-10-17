@@ -18,6 +18,7 @@ On debian-dev today this should show two pies: `/` (`/dev/nvme0n1p4`) and `/mnt/
 - **ADR-004**: the UI thread never calls `statvfs`. This feature uses one worker thread per mount. The timeout and the no-re-dispatch logic are deferred to the "Network share probe" item.
 - **ADR-006**: the app id `storage-visualizer` is set now (one line). Frameless, tray and KWin are out of scope.
 - **ADR-008**: pies are drawn with QPainter. Settled in this brainstorming; to be marked Accepted on this branch.
+- **ADR-009** (Proposed on this branch): worker results reach Qt through plain `threading` in `core/` and a queued `Signal(object)` bridge in `ui/`.
 - **PLANNING.md**: Architecture (`core/` has no Qt imports), Data Models (`MountInfo`, `Volume`), Volume Rules, Testing Approach, 500-line file limit.
 
 ## Scope
@@ -50,6 +51,8 @@ main()
 
 Enumeration runs on the UI thread on purpose: `disk_partitions` parses `/proc/self/mounts` and never touches a mounted filesystem, so it cannot hang on a dead device. Only `statvfs` can, and that always runs in a worker.
 
+This claim depends on `psutil>=6.0`, which is why the dependency is pinned (see Tooling). psutil 5.7.4 through 5.9.x called `statvfs` on every mount inside `disk_partitions()` to fill the `maxfile`/`maxpath` fields, so a dead NFS mount could hang enumeration on the UI thread. psutil 6.0 removed those fields and the `statvfs` call.
+
 ## Package Layout
 
 ```
@@ -70,6 +73,7 @@ storage_visualizer/
     main_window.py
     pie_widget.py
 tests/
+  conftest.py              # os.environ.setdefault("QT_QPA_PLATFORM", "offscreen") before any Qt import
   core/test_enumerator.py, test_usage.py
   ui/test_pie_widget.py, test_main_window.py
 ```
@@ -162,7 +166,7 @@ Rules, applied in this order:
 - `set_volume(volume)` stores the volume and calls `update()`.
 - `paintEvent` uses QPainter with antialiasing and draws one of three states:
   - **loading** (`volume is None`): grey outline ring, "…" in the centre
-  - **ok**: the used slice in an accent colour from 12 o'clock clockwise, the free slice in light grey, and the used percent (rounded integer) in the centre. If `total == 0`, it shows 0%.
+  - **ok**: the used slice in an accent colour from 12 o'clock clockwise, the free slice in light grey, and the used percent (rounded integer) in the centre. Slices and percent are computed against `used + free`, which is df's Use% formula, not against `total`. Blocks reserved for root are left out of the pie, so the percent matches `df -h`. `Volume.total` stays in the model unchanged. If `used + free == 0`, the pie shows 0%.
   - **unavailable**: solid grey disc with "unavailable" in the centre
 - Under the pie: the label (the volume's label once known, otherwise the mount point), elided to the widget width.
 - Colours are module constants; no theming.
@@ -188,7 +192,7 @@ Rules, applied in this order:
   - `UsageProbe.probe_all` with a fake `statvfs` and a lock-protected collector: after joining the returned threads, there is exactly one `Volume` per mount and the mount points match
 
 **ui/**: pytest-qt smoke tests, no coverage floor.
-- `PieWidget` `grab()` works in the loading, ok (including `total == 0`) and unavailable states.
+- `PieWidget` `grab()` works in the loading, ok (including `used + free == 0`) and unavailable states.
 - `MainWindow` with 2 mounts has 2 pies; `update_volume` sets the right pie's volume; an unknown mount point is ignored.
 - `MainWindow([])` shows the "No volumes found" label.
 - Bridge: emitting `volume_ready` from a `threading.Thread` updates the window's pie (`qtbot.waitUntil`).
@@ -198,7 +202,7 @@ Rules, applied in this order:
 ## Tooling
 
 - `pyproject.toml` (setuptools):
-  - Python `>=3.13`; dependencies `PySide6`, `psutil`
+  - Python `>=3.13`; dependencies `psutil>=6.0` (see the Architecture note on `disk_partitions`) and `PySide6>=6.8`
   - extra `dev` = `pytest`, `pytest-qt`, `pytest-cov`, `ruff`
   - script `storage-visualizer = storage_visualizer.ui.app:main`
   - `[tool.ruff]`: line length 100, target py313
@@ -209,4 +213,5 @@ Rules, applied in this order:
 ## Decisions to Record on This Branch
 
 - ADR-008 → Accepted (QPainter)
-- No new ADR needed: approach 1 (plain threads in `core/`, Qt signal bridge in `ui/`) follows directly from PLANNING.md's architecture and ADR-004. It goes in PLANNING.md's architecture notes instead.
+- ADR-009 (drafted as Proposed on this branch, flipped to Accepted at finish together with ADR-008): worker results reach Qt through plain `threading` in `core/` plus a queued `Signal(object)` bridge in `ui/`. QThreadPool/QRunnable and QThread rejected.
+- `docs/TASK.md` Known Issues: "Non-OSError exception in a probe worker leaves the pie on loading forever; traceback goes to stderr only. Revisit with polling."

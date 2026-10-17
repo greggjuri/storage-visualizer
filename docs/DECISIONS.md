@@ -256,6 +256,39 @@ A custom `PieWidget` painting two arcs with `QPainter`, plus labels.
 
 ---
 
+## ADR-009: Deliver probe results to Qt via plain threads in core/ and a queued Signal bridge in ui/
+
+**Date**: 2026-10-17
+**Status**: Proposed
+
+### Context
+ADR-004 needs `statvfs` off the UI thread, with one worker per mount. `core/` must not import Qt, but results have to reach widgets on the UI thread.
+
+### Decision
+- `core.usage.UsageProbe.probe_all(mounts, on_result)` starts one plain `threading.Thread` per mount and calls `on_result(volume)` from the worker.
+- `ui/` passes `ResultBridge.volume_ready.emit` as `on_result`. `volume_ready` is a `Signal(object)` on a `QObject` that lives on the UI thread, so Qt queues delivery to the UI thread.
+
+### Rationale
+- Probing stays in `core/`, testable with a fake `statvfs` and no Qt.
+- One unpooled thread per mount is the shape ADR-004's timeout and no-re-dispatch logic needs. A parked thread never takes a slot another mount needs.
+
+### Alternatives Considered
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| Plain threads in core/ + queued Signal bridge in ui/ | No Qt in core/, matches ADR-004, tiny bridge | Thread lifecycle is ours to manage | Accepted |
+| QThreadPool / QRunnable in ui/ | Qt-native, signals built in | Moves probing out of core/; pool size cap fills up with threads stuck on dead mounts | Rejected |
+| QThread per mount | Qt-native thread with signals | Qt type in core/ breaks the no-Qt rule, or probing moves to ui/; more boilerplate per mount | Rejected |
+| concurrent.futures.ThreadPoolExecutor in core/ | Futures API | Same pool-slot problem as QThreadPool once a worker parks on a dead mount | Rejected |
+
+### Consequences
+**Positive:** `core/` stays Qt-free and fully unit-testable; the bridge is one class.
+**Negative:** A non-`OSError` exception in a worker never reaches the UI; that pie stays on "loading" and the traceback goes only to stderr (tracked in TASK.md Known Issues).
+
+### References
+- Spec: `docs/superpowers/specs/2026-10-17-pie-per-volume-design.md`
+
+---
+
 ## Template for New Decisions
 
 ```markdown
