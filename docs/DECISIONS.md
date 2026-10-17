@@ -323,8 +323,6 @@ Create an ADR when:
 
 ## Key Principles Captured in ADRs
 
-{As you make decisions, summarize key principles here}
-
-1. **{Principle 1}**: {Brief explanation}
-2. **{Principle 2}**: {Brief explanation}
-3. **{Principle 3}**: {Brief explanation}
+1. **core/ has no Qt imports**: all GUI code lives in ui/ (PLANNING.md, Architecture)
+2. **The UI thread never calls into the filesystem**: usage probes run in per-mount workers with a timeout (ADR-004)
+3. **Debian 13 + KDE Plasma 6 Wayland only**: no portability code (ADR-001)

@@ -27,7 +27,7 @@ pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=
 ruff check . && ruff format --check .
 ```
 
-**Minimum Coverage**: 100% for `core/`; `ui/` has no floor.
+**Minimum Coverage**: 100% line coverage for `core/` only; `ui/` has no coverage floor, smoke tests only.
 
 ## Manual Integration Testing
 
@@ -138,7 +138,7 @@ def test_window_shows_one_pie_per_volume(qtbot, make_volume):
 ## Pre-Finish Checklist
 
 - [ ] All tests pass
-- [ ] `core/` coverage is 100%
+- [ ] `core/` line coverage is 100%
 - [ ] No ruff errors
 - [ ] Manual checklist completed (if applicable)
 - [ ] Idle CPU effectively zero between polls

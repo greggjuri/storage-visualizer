@@ -7,7 +7,7 @@ Visual Storage Monitor: a small always-available window on Debian 13 / KDE Plasm
 ## Commands
 
 ```bash
-pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=100   # all tests, core/ coverage
+pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=100   # all tests; 100% line coverage gate on core/ only
 ruff check . && ruff format --check .                                                 # lint + format check
 python -m storage_visualizer                                                          # run locally
 pipx install --force .                                                                # install (or: pipx upgrade storage-visualizer)
@@ -35,7 +35,7 @@ Default: strict TDD per Superpowers. Exceptions:
 
 - Max 500 lines per file; split into modules before you hit it
 - Conventional commits: `feat:` `fix:` `refactor:` `docs:` `test:`
-- Coverage floor: 100% for `core/`; no floor for `ui/`
+- Coverage floor: 100% line coverage for `core/` only (`pytest --cov=storage_visualizer.core --cov-fail-under=100`); `ui/` has no coverage floor, smoke tests only
 - Never commit secrets
 - After changes to mount enumeration, usage probing, polling, the window or the tray:
   run the manual checklist in `docs/TESTING.md` before finishing

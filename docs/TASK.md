@@ -21,5 +21,4 @@
 
 ## Notes
 - ADR-008 (QPainter vs QtCharts) is Proposed; settle it while brainstorming the first feature.
-- docs/TESTING.md: replace the web checklist with the manual checks in PLANNING.md → Testing Approach.
 - TDD scope: core/ strict TDD; ui/ pytest-qt smoke tests only; tray and KWin behavior covered by the manual checklist.
