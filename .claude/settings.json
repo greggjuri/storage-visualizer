@@ -1,0 +1,14 @@
+{
+  "enabledPlugins": {
+    "superpowers@anthropic-plugin-directory": true,
+    "ce-superpowers@greggjuri": true
+  },
+  "extraKnownMarketplaces": {
+    "greggjuri": {
+      "source": {
+        "source": "github",
+        "repo": "greggjuri/ce-superpowers"
+      }
+    }
+  }
+}
