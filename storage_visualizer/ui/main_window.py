@@ -6,21 +6,36 @@ from storage_visualizer.ui.pie_widget import PieWidget
 
 
 class MainWindow(QWidget):
-    def __init__(self, mounts: list[MountInfo]) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Storage")
         self._pies: dict[str, PieWidget] = {}
-        layout = QHBoxLayout(self)
-        if not mounts:
-            layout.addWidget(QLabel("No volumes found"))
-        for mount in mounts:
-            pie = PieWidget(mount.mount_point)
-            self._pies[mount.mount_point] = pie
-            layout.addWidget(pie)
+        self._layout = QHBoxLayout(self)
+        self._empty = QLabel("No volumes found")  # always last; pies are inserted before it
+        self._layout.addWidget(self._empty)
 
     @property
     def pies(self) -> dict[str, PieWidget]:
         return self._pies
+
+    def set_mounts(self, mounts: list[MountInfo]) -> None:
+        """Add and remove pies by mount point; pies still present keep their last volume."""
+        wanted = {m.mount_point for m in mounts}
+        removed = [mp for mp in self._pies if mp not in wanted]
+        for mp in removed:
+            pie = self._pies.pop(mp)
+            self._layout.removeWidget(pie)
+            pie.deleteLater()
+        added = sorted(wanted - self._pies.keys())
+        for mp in added:
+            index = sum(1 for existing in self._pies if existing < mp)
+            pie = PieWidget(mp)
+            self._pies[mp] = pie
+            self._layout.insertWidget(index, pie)
+        self._empty.setVisible(not self._pies)
+        if removed or added:
+            # Deliberate: SetFixedSize on the layout would fight the Flow layout's wrapping.
+            self.adjustSize()
 
     @Slot(object)
     def update_volume(self, volume: Volume) -> None:

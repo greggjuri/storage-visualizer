@@ -16,7 +16,8 @@ def main() -> int:
 
     mounts = enumerate_mounts(psutil.disk_partitions(all=True))
 
-    window = MainWindow(mounts)
+    window = MainWindow()
+    window.set_mounts(mounts)
     bridge = ResultBridge()  # keep referenced until app.exec() returns
     bridge.volume_ready.connect(window.update_volume)
 
