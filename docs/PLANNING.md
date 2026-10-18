@@ -25,6 +25,8 @@ core/  (Enumerator, UsageProbe, Volume)  — pure Python, no Qt imports, unit-te
 ui/    (MainWindow, PieWidget, FlowLayout, TrayIcon) — PySide6
 ```
 
+Probe results reach the UI thread through plain `threading.Thread` workers in `core/` (one per mount) that call a callback, plus a queued `ResultBridge` (`Signal(object)` on a UI-thread `QObject`) in `ui/`. See ADR-009.
+
 Data flows one way: timer tick → enumerate → probe → hand the window a fresh `list[Volume]`. The window diffs by mount point and adds, updates or removes pies in place.
 
 ## Tech Stack
@@ -32,8 +34,10 @@ Data flows one way: timer tick → enumerate → probe → hand the window a fre
 - **Platform:** Debian 13 (trixie), KDE Plasma 6, Wayland session. Nothing else is supported.
 - **Language:** Python 3.13 (system interpreter)
 - **GUI:** PySide6 (Qt 6), native Wayland platform plugin
+- **Dependency floors:** `psutil>=6.0` (6.0 dropped the per-mount statvfs in `disk_partitions()`, so enumeration can't hang on a dead mount), `PySide6>=6.8`
 - **Disk info:** psutil (mount enumeration), `os.statvfs` (usage), `/dev/disk/by-label` (labels)
 - **Tests:** pytest, pytest-qt for widget smoke tests
+- **Lint:** ruff excludes `docs/`, because ruff >=0.17 formats Python blocks inside Markdown and would rewrite the docs
 - **Install:** pipx from the git repo; XDG autostart `.desktop` file
 
 ## Data Models
