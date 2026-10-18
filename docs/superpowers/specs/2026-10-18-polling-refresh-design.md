@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-18
 **Backlog item**: "Polling refresh" (docs/TASK.md, Next)
-**Status**: Approved design (branch feat/polling-refresh)
+**Status**: Implemented (branch feat/polling-refresh)
 
 ## Goal
 
@@ -16,7 +16,7 @@ Polling makes ADR-004's no-re-dispatch rule apply, so this feature adds the busy
 - **ADR-004**: no new probe for a mount whose previous probe is outstanding. This feature implements that guard. The 2 s timeout and "unavailable" for stuck probes stay in the Network share probe item.
 - **ADR-005**: a `QTimer` fires every 30 s and runs a full enumerate-and-probe cycle. No mount watchers.
 - **ADR-009**: plain threads in `core/` call `on_result` from the worker; `ResultBridge.volume_ready` queues delivery to the UI thread. Results arrive one volume at a time.
-- **ADR-010** (Proposed, this spec): the refresh cycle is owned by a `ui/` Refresher.
+- **ADR-010** (Accepted): the refresh cycle is owned by a `ui/` Refresher.
 - **PLANNING.md**: Architecture (`core/` has no Qt imports, data flow), Non-Functional Requirements (idle CPU near zero, UI thread never calls `statvfs`), Testing Approach, 500-line file limit.
 
 ## Scope
@@ -226,7 +226,7 @@ Checks:
 
 ## Decisions Recorded on This Branch
 
-### ADR-010 (Proposed): Refresh cycle owned by a ui/ Refresher
+### ADR-010 (Accepted): Refresh cycle owned by a ui/ Refresher
 
 **Context**: Polling (ADR-005) needs something that owns the 30 s `QTimer` and runs enumerate → diff → probe on startup and on every tick. `core/` can't hold a `QTimer`, and `MainWindow` is a view.
 

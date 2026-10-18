@@ -292,6 +292,38 @@ ADR-004 needs `statvfs` off the UI thread, with one worker per mount. `core/` mu
 
 ---
 
+## ADR-010: Refresh cycle owned by a ui/ Refresher
+
+**Date**: 2026-10-18
+**Status**: Accepted
+
+### Context
+Polling (ADR-005) needs something that owns the 30 s `QTimer` and runs enumerate → diff → probe at startup and on every tick. `core/` can't hold a `QTimer`, and `MainWindow` is a view.
+
+### Decision
+A `Refresher(QObject)` in `ui/refresher.py` owns the timer and a single `UsageProbe`, takes the enumerate step as one callable (default `core.enumerator.enumerate_system_mounts`), and exposes `refresh()` (startup and every tick) and `start()`. `MainWindow.set_mounts()` diffs pies by mount point; results still arrive one volume at a time (ADR-009).
+
+### Rationale
+- `MainWindow` stays a plain view; the cycle is testable with a fake enumerate, fake probe and no timer waits.
+- One `UsageProbe` for the app's lifetime is what makes ADR-004's busy guard work across ticks.
+
+### Alternatives Considered
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| `Refresher` in `ui/` | View stays a view; clear seams for tests | One more small class | Accepted |
+| Timer and `refresh()` in `MainWindow` | Fewer classes | View takes on enumeration and probing; widget tests need psutil and probe fakes | Rejected |
+| `threading.Timer` loop in `core/` | Qt-free | Contradicts ADR-005 (`QTimer`); needs a second thread-to-Qt path | Rejected |
+
+### Consequences
+**Positive:** `app.py` is a few lines of wiring; enumerate, probe, window and bridge are all injectable.
+**Negative:** The Refresher must outlive `app.exec()`, so `app.py` keeps it referenced. An enumerate failure at startup exits the app; on a tick it only prints a traceback.
+
+### References
+- Spec: `docs/superpowers/specs/2026-10-18-polling-refresh-design.md`
+- Plan: `docs/superpowers/plans/2026-10-18-polling-refresh.md`
+
+---
+
 ## Template for New Decisions
 
 ```markdown
