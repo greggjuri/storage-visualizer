@@ -13,6 +13,7 @@
 - [ ] Tray icon - show/hide window on click, Quit in the menu
 - [ ] Frameless window - no decorations, drag to move via startSystemMove, stable app id
 - [ ] Install and autostart - pipx entry point, XDG autostart .desktop, README section with the KWin "keep above" rule
+- [ ] Theme-aware text - pie label uses palette().windowText() so it's readable on Breeze Dark
 
 ## Done
 - [x] Pie per volume - enumerate filtered, deduped local mounts once at startup and show one pie each in a plain window

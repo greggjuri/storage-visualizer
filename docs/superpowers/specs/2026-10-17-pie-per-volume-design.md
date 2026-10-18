@@ -17,7 +17,7 @@ On debian-dev today this should show two pies: `/` (`/dev/nvme0n1p4`) and `/mnt/
 - **ADR-003**: `psutil.disk_partitions(all=True)` plus our own filters; dedupe by device, shortest mount point wins.
 - **ADR-004**: the UI thread never calls `statvfs`. This feature uses one worker thread per mount. The timeout and the no-re-dispatch logic are deferred to the "Network share probe" item.
 - **ADR-006**: the app id `storage-visualizer` is set now (one line). Frameless, tray and KWin are out of scope.
-- **ADR-008**: pies are drawn with QPainter. Settled in this brainstorming; to be marked Accepted on this branch.
+- **ADR-008** (Accepted): pies are drawn with QPainter. Settled in this brainstorming.
 - **ADR-009** (Accepted): worker results reach Qt through plain `threading` in `core/` and a queued `Signal(object)` bridge in `ui/`.
 - **PLANNING.md**: Architecture (`core/` has no Qt imports), Data Models (`MountInfo`, `Volume`), Volume Rules, Testing Approach, 500-line file limit.
 
@@ -210,8 +210,8 @@ Rules, applied in this order:
 - Development: `python3 -m venv .venv && .venv/bin/pip install -e .[dev]`
 - `.gitignore`: `.venv/`, `__pycache__/`, `*.egg-info/`, `.coverage`, `.pytest_cache/`, `.ruff_cache/`, `build/`, `dist/`
 
-## Decisions to Record on This Branch
+## Decisions Recorded on This Branch
 
-- ADR-008 → Accepted (QPainter)
-- ADR-009 (drafted as Proposed on this branch, flipped to Accepted at finish together with ADR-008): worker results reach Qt through plain `threading` in `core/` plus a queued `Signal(object)` bridge in `ui/`. QThreadPool/QRunnable and QThread rejected.
+- ADR-008: Accepted (QPainter)
+- ADR-009: Accepted. Worker results reach Qt through plain `threading` in `core/` plus a queued `Signal(object)` bridge in `ui/`. QThreadPool/QRunnable and QThread rejected.
 - `docs/TASK.md` Known Issues: "Non-OSError exception in a probe worker leaves the pie on loading forever; traceback goes to stderr only. Revisit with polling."
