@@ -119,7 +119,7 @@ class Refresher(QObject):
 - `QTimer(self)` with `setInterval(INTERVAL_MS)`, `timeout` connected to `refresh`. No separate startup path: `start()` is one `refresh()` and then the timer.
 - If `probe` is None, the Refresher builds one `UsageProbe()` in `__init__` and reuses it for the app's lifetime; the busy set only works across ticks through one instance.
 - `enumerate_fn` is a single callable, so Refresher tests never touch psutil.
-- If `enumerate_fn` raises, PySide prints the traceback, pies stay as they are and the timer keeps running. No extra handling: psutil ≥6 only reads `/proc/mounts`.
+- If `enumerate_fn` raises on a timer tick, PySide prints the traceback, pies stay as they are and the timer keeps running. At startup the exception propagates out of `start()` and the app exits (see Error Handling). No extra handling: psutil ≥6 only reads `/proc/mounts`.
 
 ### app.py
 
@@ -144,7 +144,8 @@ The `psutil` and `enumerate_mounts` imports leave `app.py`.
 | `thread.start()` raises | Mount freed, exception re-raised to the caller |
 | Probe stuck in `statvfs` | Mount stays busy and is skipped each tick; pie keeps its last state ("…" if new) until the call returns |
 | Late result for a removed mount | Ignored by `update_volume` |
-| `enumerate_fn` raises | Traceback printed by PySide; pies unchanged; timer keeps running |
+| `enumerate_fn` raises on a timer tick | Traceback printed by PySide; pies unchanged; timer keeps running |
+| `enumerate_fn` raises at startup (`refresher.start()` called directly from `main()`) | Exception propagates and the app exits; intended, since there is nothing to show |
 
 ## Testing
 
