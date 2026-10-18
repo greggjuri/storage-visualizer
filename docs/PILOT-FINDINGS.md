@@ -49,6 +49,7 @@ Each entry: what happened, where the fix belongs, what to change.
 | B1 | project-context confirmed ADRs instead of re-asking stack questions; spec had a proper Context section citing ADRs | — | — | Works |
 | B2 | Spec weighed alternatives ("approach 1") for the thread→Qt bridge but said "no new ADR needed", contradicting `recording-decisions`' own criteria | skills/project-context or recording-decisions | During brainstorming, apply the "what counts as a decision" test to every choice between alternatives and draft the ADR as Proposed then | Open |
 | B3 | Spec baked in machine state ("should show two pies"); a third mounted drive made the manual check look like a failure | skills/project-context (spec guidance) | Specs and plans state expected behavior as rules, not as a snapshot of the dev machine | Open |
+| B4 | During Polling refresh brainstorming, a choice between alternatives (where the refresh cycle lives) was proposed as ADR-010 up front, as recording-decisions intends | — | — | Works |
 
 ## Plans and Execution
 
@@ -58,6 +59,7 @@ Each entry: what happened, where the fix belongs, what to change.
 | E2 | Plan tasks said "per the spec"; subagent implementer briefs didn't include the spec, so details (pseudo-fs list, main() order) were missing until the controller pointed briefs at the spec | skills (plan guidance) | Plans inline every detail a task needs, or each task names the exact spec sections to read | Open |
 | E3 | Code recommended Native execution while the plan header (from Superpowers) says subagent-driven is recommended | — | Note only; pick per feature. Subagent-driven was used for the pilot's first feature | Note |
 | E4 | Subagent-driven per-task review worked; final branch review found only doc nits | — | — | Works |
+| E5 | Polling refresh spec marks the manual check as a STOP hand-off and states expectations as rules (E1/B3 applied) | — | — | Works |
 
 ## Finishing (recording-decisions)
 

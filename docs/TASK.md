@@ -1,10 +1,10 @@
 # Visual Storage Monitor: Backlog
 
 ## Next
+- [ ] Polling refresh - re-run enumerate + probe every 30 s; add, update and remove pies in place by mount point
 
 ## Backlog
 ### Phase 1: Working monitor
-- [ ] Polling refresh - re-run enumerate + probe every 30 s; add, update and remove pies in place by mount point
 - [ ] Network share probe - per-mount worker with 2 s timeout, "unavailable" pie state, no re-dispatch while a probe is stuck (ADR-004)
 - [ ] Volume labels - by-label name, else mount point, "/" as System; used/free/total text under each pie
 - [ ] Flow layout - pies in one row that wraps to a grid as volumes are added
