@@ -1,7 +1,6 @@
 # Visual Storage Monitor: Backlog
 
 ## Next
-- [ ] Pie per volume - enumerate filtered, deduped local mounts once at startup and show one pie each in a plain window
 
 ## Backlog
 ### Phase 1: Working monitor
@@ -16,9 +15,11 @@
 - [ ] Install and autostart - pipx entry point, XDG autostart .desktop, README section with the KWin "keep above" rule
 
 ## Done
+- [x] Pie per volume - enumerate filtered, deduped local mounts once at startup and show one pie each in a plain window
 
 ## Known Issues
+- Non-OSError exception in a probe worker leaves the pie on loading forever; traceback goes to stderr only. Revisit with polling.
+- Qt portal warning on start: "Could not register app ID: App info not found for 'storage-visualizer'" — no installed .desktop file yet. Expect it to go away with the Install and autostart item; verify there.
 
 ## Notes
-- ADR-008 (QPainter vs QtCharts) is Proposed; settle it while brainstorming the first feature.
 - TDD scope: core/ strict TDD; ui/ pytest-qt smoke tests only; tray and KWin behavior covered by the manual checklist.

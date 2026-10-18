@@ -230,7 +230,7 @@ The app is for a single machine and needs to start on login.
 ## ADR-008: Draw pies with QPainter rather than QtCharts
 
 **Date**: 2026-10-17
-**Status**: Proposed
+**Status**: Accepted
 
 ### Context
 Each volume needs a small pie (used/free) with text. QtCharts can do it, but it is a heavy module, and Qt 6 is steering toward Qt Graphs.
@@ -244,22 +244,24 @@ A custom `PieWidget` painting two arcs with `QPainter`, plus labels.
 ### Alternatives Considered
 | Option | Pros | Cons | Verdict |
 |---|---|---|---|
-| QtCharts QPieSeries | Built-in legend, hover | Heavy, legacy path in Qt 6 | Proposed reject |
-| Qt Graphs | Current Qt direction | Overkill for a two-slice pie | Proposed reject |
+| QtCharts QPieSeries | Built-in legend, hover | Heavy, legacy path in Qt 6 | Rejected |
+| Qt Graphs | Current Qt direction | Overkill for a two-slice pie | Rejected |
 
 ### Consequences
 **Positive:** Lightweight, easy to test with pytest-qt.
 **Negative:** Hover and animation are on us if ever wanted.
 
 ### References
-- Planning chat, 2026-10-17; settle in brainstorming for the first feature
+- Planning chat, 2026-10-17
+- Spec: `docs/superpowers/specs/2026-10-17-pie-per-volume-design.md`
+- Plan: `docs/superpowers/plans/2026-10-17-pie-per-volume.md`
 
 ---
 
 ## ADR-009: Deliver probe results to Qt via plain threads in core/ and a queued Signal bridge in ui/
 
 **Date**: 2026-10-17
-**Status**: Proposed
+**Status**: Accepted
 
 ### Context
 ADR-004 needs `statvfs` off the UI thread, with one worker per mount. `core/` must not import Qt, but results have to reach widgets on the UI thread.
@@ -286,6 +288,7 @@ ADR-004 needs `statvfs` off the UI thread, with one worker per mount. `core/` mu
 
 ### References
 - Spec: `docs/superpowers/specs/2026-10-17-pie-per-volume-design.md`
+- Plan: `docs/superpowers/plans/2026-10-17-pie-per-volume.md`
 
 ---
 
