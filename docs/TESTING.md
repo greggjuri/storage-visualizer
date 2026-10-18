@@ -67,31 +67,42 @@ Required before finishing any branch that touches:
 ```python
 # Test file naming: tests/core/test_{module}.py
 
-def test_enumerate_keeps_nfs_and_drops_tmpfs(fake_partitions):
+Part = namedtuple("Part", "device mountpoint fstype")
+
+def test_enumerate_keeps_ext4_and_drops_tmpfs():
     # Arrange
-    fake_partitions([
-        ("server:/export", "/mnt/nas", "nfs4"),
-        ("tmpfs", "/tmp", "tmpfs"),
-    ])
+    parts = [
+        Part("/dev/nvme0n1p4", "/", "ext4"),
+        Part("tmpfs", "/tmp", "tmpfs"),
+    ]
 
     # Act
-    mounts = enumerate_mounts()
+    mounts = enumerate_mounts(parts)
 
     # Assert
-    assert [m.mount_point for m in mounts] == ["/mnt/nas"]
+    assert [m.mount_point for m in mounts] == ["/"]
 ```
 
 ### ui/ Smoke Tests
 ```python
 # Test file naming: tests/ui/test_{widget}.py
 
-def test_window_shows_one_pie_per_volume(qtbot, make_volume):
-    window = MainWindow()
+def test_update_volume_sets_matching_pie(qtbot):
+    # Arrange
+    mounts = [
+        MountInfo("/dev/a1", "/", "ext4", False),
+        MountInfo("/dev/b1", "/mnt/backup", "ext4", False),
+    ]
+    window = MainWindow(mounts)
     qtbot.addWidget(window)
+    vol = Volume("/mnt/backup", "/mnt/backup", "ext4", False, "ok", 100, 40, 60)
 
-    window.set_volumes([make_volume("/"), make_volume("/home")])
+    # Act
+    window.update_volume(vol)
 
-    assert len(window.pies()) == 2
+    # Assert
+    assert list(window.pies) == ["/", "/mnt/backup"]
+    assert window.pies["/mnt/backup"].volume == vol
 ```
 
 ## Bug Report Template

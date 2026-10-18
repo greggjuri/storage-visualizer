@@ -20,6 +20,7 @@
 ## Known Issues
 - Non-OSError exception in a probe worker leaves the pie on loading forever; traceback goes to stderr only. Revisit with polling.
 - Qt portal warning on start: "Could not register app ID: App info not found for 'storage-visualizer'" — no installed .desktop file yet. Expect it to go away with the Install and autostart item; verify there.
+- Quit-time race: a probe worker finishing after app.exec() returns can emit on the deleted ResultBridge and print a RuntimeError traceback. Unlikely with local disks; fix in Network share probe (shutdown flag or disconnect in aboutToQuit).
 
 ## Notes
 - TDD scope: core/ strict TDD; ui/ pytest-qt smoke tests only; tray and KWin behavior covered by the manual checklist.

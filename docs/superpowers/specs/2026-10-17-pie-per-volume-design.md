@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-17
 **Backlog item**: "Pie per volume" (docs/TASK.md, Next)
-**Status**: Approved in brainstorming, awaiting spec review
+**Status**: Implemented (branch feat/pie-per-volume)
 
 ## Goal
 
@@ -18,7 +18,7 @@ On debian-dev today this should show two pies: `/` (`/dev/nvme0n1p4`) and `/mnt/
 - **ADR-004**: the UI thread never calls `statvfs`. This feature uses one worker thread per mount. The timeout and the no-re-dispatch logic are deferred to the "Network share probe" item.
 - **ADR-006**: the app id `storage-visualizer` is set now (one line). Frameless, tray and KWin are out of scope.
 - **ADR-008**: pies are drawn with QPainter. Settled in this brainstorming; to be marked Accepted on this branch.
-- **ADR-009** (Proposed on this branch): worker results reach Qt through plain `threading` in `core/` and a queued `Signal(object)` bridge in `ui/`.
+- **ADR-009** (Accepted): worker results reach Qt through plain `threading` in `core/` and a queued `Signal(object)` bridge in `ui/`.
 - **PLANNING.md**: Architecture (`core/` has no Qt imports), Data Models (`MountInfo`, `Volume`), Volume Rules, Testing Approach, 500-line file limit.
 
 ## Scope
