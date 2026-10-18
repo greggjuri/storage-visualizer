@@ -1,6 +1,8 @@
 from collections.abc import Iterable
 from typing import Any
 
+import psutil
+
 from storage_visualizer.core.models import MountInfo
 
 PSEUDO_FSTYPES = frozenset(
@@ -61,3 +63,7 @@ def enumerate_mounts(partitions: Iterable[Any]) -> list[MountInfo]:
             best[part.device] = part
     mounts = [MountInfo(p.device, p.mountpoint, p.fstype, False) for p in best.values()]
     return sorted(mounts, key=lambda m: m.mount_point)
+
+
+def enumerate_system_mounts() -> list[MountInfo]:
+    return enumerate_mounts(psutil.disk_partitions(all=True))  # all=True: ADR-003

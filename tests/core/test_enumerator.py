@@ -2,6 +2,7 @@ from collections import namedtuple
 
 import pytest
 
+from storage_visualizer.core import enumerator
 from storage_visualizer.core.enumerator import enumerate_mounts
 from storage_visualizer.core.models import MountInfo
 
@@ -88,3 +89,15 @@ def test_dedupe_tie_breaks_lexicographically():
 def test_output_sorted_by_mount_point():
     parts = [Part("/dev/b", "/z", "ext4", ""), Part("/dev/a", "/a", "ext4", "")]
     assert mps(parts) == ["/a", "/z"]
+
+
+def test_enumerate_system_mounts_uses_all_true(monkeypatch):
+    calls = []
+
+    def fake_partitions(all):
+        calls.append(all)
+        return [Part("/dev/sda1", "/", "ext4", ""), Part("tmpfs", "/tmp", "tmpfs", "")]
+
+    monkeypatch.setattr(enumerator.psutil, "disk_partitions", fake_partitions)
+    assert enumerator.enumerate_system_mounts() == [MountInfo("/dev/sda1", "/", "ext4", False)]
+    assert calls == [True]

@@ -40,11 +40,17 @@ Required before finishing any branch that touches:
 ### Setup
 1. `pipx install --force .` (or `python -m storage_visualizer` from the checkout)
 2. Have a USB drive and an NFS or SMB share available
-3. Keep `df -h` and `ps -o nlwp -p $(pgrep -f storage_visualizer)` handy
+3. Keep these handy:
+   - Numbers: `df -h`
+   - Threads: `watch -n5 'ps -o nlwp= -p $(pgrep -f storage_visualizer)'`
+   - CPU: `pidstat -p $(pgrep -f storage_visualizer) 5` (sysstat), or `top -p $(pgrep -f storage_visualizer)`
+   - USB: mount through the KDE device notifier, confirm the path with `findmnt`
 
 ### Checklist
 - [ ] Numbers match `df -h` for every shown volume
 - [ ] Plug in a USB drive → pie appears within 30 s; unmount → pie disappears
+- [ ] Existing pies don't flicker to "…" on a tick
+- [ ] Thread count returns to baseline between polls
 - [ ] Stop the NFS/SMB server → that pie shows "unavailable" within one poll, the UI stays responsive, and the thread count stays flat over several polls
 - [ ] Tray icon shows/hides the window; Quit exits cleanly
 - [ ] KWin rule keeps the window on top and in place across logout/login
@@ -93,8 +99,9 @@ def test_update_volume_sets_matching_pie(qtbot):
         MountInfo("/dev/a1", "/", "ext4", False),
         MountInfo("/dev/b1", "/mnt/backup", "ext4", False),
     ]
-    window = MainWindow(mounts)
+    window = MainWindow()
     qtbot.addWidget(window)
+    window.set_mounts(mounts)
     vol = Volume("/mnt/backup", "/mnt/backup", "ext4", False, "ok", 100, 40, 60)
 
     # Act

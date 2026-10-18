@@ -1,12 +1,10 @@
 import sys
 
-import psutil
 from PySide6.QtWidgets import QApplication
 
-from storage_visualizer.core.enumerator import enumerate_mounts
-from storage_visualizer.core.usage import UsageProbe
 from storage_visualizer.ui.bridge import ResultBridge
 from storage_visualizer.ui.main_window import MainWindow
+from storage_visualizer.ui.refresher import Refresher
 
 
 def main() -> int:
@@ -14,13 +12,11 @@ def main() -> int:
     app.setApplicationName("storage-visualizer")
     app.setDesktopFileName("storage-visualizer")
 
-    mounts = enumerate_mounts(psutil.disk_partitions(all=True))
-
-    window = MainWindow(mounts)
-    bridge = ResultBridge()  # keep referenced until app.exec() returns
+    window = MainWindow()
+    bridge = ResultBridge()
     bridge.volume_ready.connect(window.update_volume)
-
+    refresher = Refresher(window, bridge)  # keep referenced until app.exec() returns
+    refresher.start()  # first refresh before show(): window opens at its final size
     window.show()
-    UsageProbe().probe_all(mounts, bridge.volume_ready.emit)
 
     return app.exec()
