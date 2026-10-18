@@ -25,6 +25,7 @@ class MainWindow(QWidget):
         for mp in removed:
             pie = self._pies.pop(mp)
             self._layout.removeWidget(pie)
+            pie.hide()  # removeWidget leaves it a visible child until deleteLater runs
             pie.deleteLater()
         added = sorted(wanted - self._pies.keys())
         for mp in added:
@@ -32,6 +33,7 @@ class MainWindow(QWidget):
             pie = PieWidget(mp)
             self._pies[mp] = pie
             self._layout.insertWidget(index, pie)
+            pie.show()  # Qt defers the show; adjustSize would size without the new pie
         self._empty.setVisible(not self._pies)
         if removed or added:
             # Deliberate: SetFixedSize on the layout would fight the Flow layout's wrapping.

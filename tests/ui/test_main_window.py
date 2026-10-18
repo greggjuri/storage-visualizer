@@ -1,6 +1,6 @@
 import threading
 
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QApplication, QLabel
 
 from storage_visualizer.core.models import MountInfo, Volume
 from storage_visualizer.ui.bridge import ResultBridge
@@ -140,3 +140,25 @@ def test_insert_order_matches_sorted_for_awkward_paths(qtbot):
     for i in range(1, len(paths) + 1):
         w.set_mounts([mi(p) for p in paths[:i]])
     assert layout_order(w) == sorted(paths) + ["label"]
+
+
+def test_removed_pie_is_hidden_before_deferred_delete(qtbot):
+    w = MainWindow()
+    qtbot.addWidget(w)
+    w.show()
+    w.set_mounts([mi("/"), mi("/data")])
+    QApplication.processEvents()  # let the deferred show of the new pies run
+    old = w.pies["/data"]
+    assert old.isVisible()
+    w.set_mounts([mi("/")])
+    assert not old.isVisible()  # no event loop turn yet: deleteLater has not run
+
+
+def test_window_grows_immediately_when_pie_added(qtbot):
+    w = MainWindow()
+    qtbot.addWidget(w)
+    w.show()
+    w.set_mounts([mi("/")])
+    before = w.width()
+    w.set_mounts([mi("/"), mi("/home")])
+    assert w.width() > before  # adjustSize sees the new pie without processEvents()
