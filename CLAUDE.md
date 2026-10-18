@@ -24,6 +24,7 @@ This project adds a persistent context layer on top:
   PLANNING.md changes and TASK.md updates merge with the code.
 - Specs go in `docs/superpowers/specs/`, plans in `docs/superpowers/plans/` (Superpowers defaults).
 - Backlog lives in `docs/TASK.md`. Pick features from there; new ideas go there, not in chat.
+- Pilot: log process friction in `docs/PILOT-FINDINGS.md`.
 
 ### TDD scope
 Default: strict TDD per Superpowers. Exceptions:
