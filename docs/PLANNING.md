@@ -7,27 +7,27 @@ A small always-available window on my Debian desktop that shows every mounted vo
 ## Architecture
 
 ```
- QTimer (30 s)
+ Refresher (QTimer 30 s)
       │
       ▼
-┌──────────────┐   list[MountInfo]   ┌─────────────────┐   list[Volume]   ┌──────────────────────┐
-│  Enumerator  │ ──────────────────▶ │   UsageProbe    │ ───────────────▶ │     MainWindow       │
-│ psutil       │                     │ statvfs per     │                  │ frameless, flow      │
-│ all=True +   │                     │ mount in worker │                  │ layout of PieWidgets │
-│ own filters, │                     │ thread, 2 s     │                  │ (one per volume)     │
-│ dedupe, label│                     │ timeout         │                  └──────────▲───────────┘
-└──────────────┘                     └─────────────────┘                             │ show/hide
-                                                                          ┌──────────┴───────────┐
-                                                                          │  TrayIcon (SNI/KDE)  │
-                                                                          └──────────────────────┘
+┌──────────────┐   list[MountInfo]   ┌─────────────────┐ Volume (one at a time) ┌──────────────────────┐
+│  Enumerator  │ ──────────────────▶ │   UsageProbe    │ ─────────────────────▶ │     MainWindow       │
+│ psutil       │                     │ statvfs per     │                        │ frameless, flow      │
+│ all=True +   │                     │ mount in worker │                        │ layout of PieWidgets │
+│ own filters, │                     │ thread, 2 s     │                        │ (one per volume)     │
+│ dedupe, label│                     │ timeout         │                        └──────────▲───────────┘
+└──────────────┘                     └─────────────────┘                                   │ show/hide
+                                                                                ┌──────────┴───────────┐
+                                                                                │  TrayIcon (SNI/KDE)  │
+                                                                                └──────────────────────┘
 
 core/  (Enumerator, UsageProbe, Volume)  — pure Python, no Qt imports, unit-tested
-ui/    (MainWindow, PieWidget, FlowLayout, TrayIcon) — PySide6
+ui/    (MainWindow, PieWidget, FlowLayout, TrayIcon, Refresher) — PySide6
 ```
 
 Probe results reach the UI thread through plain `threading.Thread` workers in `core/` (one per mount) that call a callback, plus a queued `ResultBridge` (`Signal(object)` on a UI-thread `QObject`) in `ui/`. See ADR-009.
 
-Data flows one way: timer tick → enumerate → probe → hand the window a fresh `list[Volume]`. The window diffs by mount point and adds, updates or removes pies in place.
+Data flows one way: timer tick → enumerate → diff the mount list to add/remove pies → probe; results update pies one volume at a time (ADR-009).
 
 ## Tech Stack
 
@@ -86,7 +86,7 @@ class Volume:
 ## Testing Approach
 
 - `core/` is fully unit-tested against fake psutil and statvfs data, with no real mounts and no Qt.
-- `ui/` gets pytest-qt smoke tests: widgets build, pies update from a `list[Volume]`.
+- `ui/` gets pytest-qt smoke tests: widgets build, `set_mounts` adds/removes pies, `update_volume` updates them.
 - Manual checklist for `docs/TESTING.md` (replaces the web template's DevTools checklist):
   - plug in a USB drive → pie appears within 30 s; unmount → pie disappears
   - stop the NFS/SMB server → that pie shows "unavailable" within one poll, the UI stays responsive, and the thread count stays flat over several polls

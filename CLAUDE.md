@@ -29,7 +29,7 @@ This project adds a persistent context layer on top:
 ### TDD scope
 Default: strict TDD per Superpowers. Exceptions:
 - `core/` (Enumerator, UsageProbe, Volume): strict TDD against fake psutil/statvfs data, no real mounts, no Qt.
-- `ui/` (MainWindow, PieWidget, FlowLayout, TrayIcon): pytest-qt smoke tests only (widgets build, pies update from a `list[Volume]`).
+- `ui/` (MainWindow, PieWidget, FlowLayout, TrayIcon, Refresher): pytest-qt smoke tests only (widgets build, `set_mounts` adds/removes pies, `update_volume` updates them).
 - Tray, frameless window and KWin rule behavior: covered by the manual checklist in `docs/TESTING.md`, not automated tests.
 
 ## Rules
@@ -43,7 +43,7 @@ Default: strict TDD per Superpowers. Exceptions:
 
 ## Conventions
 
-- `core/` never imports Qt; `ui/` gets a fresh `list[Volume]` each poll and diffs by `mount_point`.
+- `core/` never imports Qt; each tick diffs the mount list to add/remove pies; results update pies one volume at a time (ADR-009).
 - The UI thread never calls `statvfs` (ADR-004).
 - Debian 13 + KDE Wayland only: no portability code (ADR-001).
 
