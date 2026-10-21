@@ -366,7 +366,7 @@ ADR-004 planned a 2 s wait per probe before marking a volume unavailable. The ne
 ## ADR-012: Read `/dev/disk/by-label` on the UI thread at enumerate time
 
 **Date**: 2026-10-20
-**Status**: Proposed
+**Status**: Accepted
 
 ### Context
 Each pie shows a volume label (spec: `docs/superpowers/specs/2026-10-20-volume-labels-design.md`). For local volumes the name comes from the udev links in `/dev/disk/by-label`. The UI thread must not block on a mounted filesystem (ADR-004, ADR-011), so reading that directory there needs a justification.

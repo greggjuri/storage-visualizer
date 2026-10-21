@@ -23,7 +23,7 @@
 ## Automated Tests
 
 ```bash
-pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=100
+.venv/bin/pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=100
 ruff check . && ruff format --check .
 ```
 
@@ -38,7 +38,7 @@ Required before finishing any branch that touches:
 - Window, tray, app id or autostart
 
 ### Setup
-1. `pipx install --force .` (or `python -m storage_visualizer` from the checkout)
+1. `pipx install --force .` (or `.venv/bin/python -m storage_visualizer` from the checkout; Debian has no `python`, and the deps live in `.venv`)
 2. Have a USB drive and an NFS or SMB share available
 3. Keep these handy:
    - Numbers: `df -h`
