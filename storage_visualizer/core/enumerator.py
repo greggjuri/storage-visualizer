@@ -1,8 +1,9 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 import psutil
 
+from storage_visualizer.core.labels import local_label, network_label, read_device_labels
 from storage_visualizer.core.models import MountInfo
 
 PSEUDO_FSTYPES = frozenset(
@@ -47,7 +48,7 @@ def _is_system_mount(mount_point: str) -> bool:
     return any(_is_under(mount_point, root) for root in SYSTEM_TREES)
 
 
-def enumerate_mounts(partitions: Iterable[Any]) -> list[MountInfo]:
+def enumerate_mounts(partitions: Iterable[Any], labels: Mapping[str, str]) -> list[MountInfo]:
     best: dict[str, Any] = {}
     for part in partitions:
         if part.fstype not in NETWORK_FSTYPES:
@@ -63,12 +64,20 @@ def enumerate_mounts(partitions: Iterable[Any]) -> list[MountInfo]:
         key = (len(part.mountpoint), part.mountpoint)
         if current is None or key < (len(current.mountpoint), current.mountpoint):
             best[part.device] = part
-    mounts = [
-        MountInfo(p.device, p.mountpoint, p.fstype, p.fstype in NETWORK_FSTYPES)
-        for p in best.values()
-    ]
+    mounts = [_mount_info(p, labels) for p in best.values()]
     return sorted(mounts, key=lambda m: m.mount_point)
 
 
+def _mount_info(part: Any, labels: Mapping[str, str]) -> MountInfo:
+    is_network = part.fstype in NETWORK_FSTYPES
+    if is_network:
+        label = network_label(part.device, part.mountpoint)
+    else:
+        label = local_label(part.mountpoint, labels.get(part.device))
+    return MountInfo(part.device, part.mountpoint, part.fstype, is_network, label)
+
+
 def enumerate_system_mounts() -> list[MountInfo]:
-    return enumerate_mounts(psutil.disk_partitions(all=True))  # all=True: ADR-003
+    parts = psutil.disk_partitions(all=True)  # all=True: ADR-003
+    labels = read_device_labels([p.device for p in parts if p.device.startswith("/dev/")])
+    return enumerate_mounts(parts, labels)

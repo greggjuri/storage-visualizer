@@ -4,13 +4,14 @@ import pytest
 
 from storage_visualizer.core import enumerator
 from storage_visualizer.core.enumerator import enumerate_mounts
+from storage_visualizer.core.labels import network_label
 from storage_visualizer.core.models import MountInfo
 
 Part = namedtuple("Part", "device mountpoint fstype opts")
 
 
 def mps(parts):
-    return [m.mount_point for m in enumerate_mounts(parts)]
+    return [m.mount_point for m in enumerate_mounts(parts, {})]
 
 
 def test_keeps_dev_block_filesystems():
@@ -23,27 +24,28 @@ def test_keeps_dev_block_filesystems():
 
 
 def test_result_fields():
-    [m] = enumerate_mounts([Part("/dev/sdd1", "/mnt/backup", "ext4", "")])
-    assert m == MountInfo("/dev/sdd1", "/mnt/backup", "ext4", False)
+    [m] = enumerate_mounts([Part("/dev/sdd1", "/mnt/backup", "ext4", "")], {})
+    assert m == MountInfo("/dev/sdd1", "/mnt/backup", "ext4", False, "backup")
 
 
 @pytest.mark.parametrize(
-    "device,fstype",
+    "device,fstype,label",
     [
-        ("server:/export", "nfs"),
-        ("server:/export", "nfs4"),
-        ("//nas/share", "cifs"),
-        ("//nas/share", "smb3"),
-        ("user@host:/", "fuse.sshfs"),
+        ("server:/export", "nfs", "export"),
+        ("server:/export", "nfs4", "export"),
+        ("//nas/share", "cifs", "share"),
+        ("//nas/share", "smb3", "share"),
+        ("user@host:/", "fuse.sshfs", "net"),
     ],
 )
-def test_keeps_network_filesystems_flagged(device, fstype):
-    [m] = enumerate_mounts([Part(device, "/mnt/net", fstype, "")])
-    assert m == MountInfo(device, "/mnt/net", fstype, True)
+def test_keeps_network_filesystems_flagged(device, fstype, label):
+    [m] = enumerate_mounts([Part(device, "/mnt/net", fstype, "")], {})
+    assert m == MountInfo(device, "/mnt/net", fstype, True, label)
+    assert m.label == network_label(device, "/mnt/net")
 
 
 def test_local_mounts_not_flagged_network():
-    [m] = enumerate_mounts([Part("/dev/sdd1", "/mnt/backup", "ext4", "")])
+    [m] = enumerate_mounts([Part("/dev/sdd1", "/mnt/backup", "ext4", "")], {})
     assert m.is_network is False
 
 
@@ -130,13 +132,52 @@ def test_output_sorted_by_mount_point():
     assert mps(parts) == ["/a", "/z"]
 
 
-def test_enumerate_system_mounts_uses_all_true(monkeypatch):
+def test_local_label_from_mapping():
+    [m] = enumerate_mounts(
+        [Part("/dev/sda2", "/mnt/hoepsis", "ntfs3", "")], {"/dev/sda2": "Hoepsis"}
+    )
+    assert m.label == "Hoepsis"
+
+
+def test_root_is_system_despite_mapping():
+    [m] = enumerate_mounts([Part("/dev/nvme0n1p4", "/", "ext4", "")], {"/dev/nvme0n1p4": "debian"})
+    assert m.label == "System"
+
+
+def test_network_label_on_mount():
+    [m] = enumerate_mounts([Part("//192.168.1.11/mansion", "/mnt/nas", "cifs", "")], {})
+    assert m.label == "mansion"
+
+
+def test_label_fallback_uses_kept_mount_point():
+    parts = [
+        Part("/dev/sda2", "/srv/data/deep", "btrfs", ""),
+        Part("/dev/sda2", "/srv/data", "btrfs", ""),
+    ]
+    [m] = enumerate_mounts(parts, {})
+    assert (m.mount_point, m.label) == ("/srv/data", "data")
+
+
+def test_enumerate_system_mounts_uses_all_true_and_reads_labels(monkeypatch):
     calls = []
+    seen = []
 
     def fake_partitions(all):
         calls.append(all)
-        return [Part("/dev/sda1", "/", "ext4", ""), Part("tmpfs", "/tmp", "tmpfs", "")]
+        return [
+            Part("/dev/sda1", "/", "ext4", ""),
+            Part("tmpfs", "/tmp", "tmpfs", ""),
+            Part("//nas/share", "/mnt/nas", "cifs", ""),
+            Part("/dev/sdb1", "/mnt/data", "ext4", ""),
+        ]
+
+    def fake_labels(devices):
+        seen.append(list(devices))
+        return {"/dev/sda1": "root-fs", "/dev/sdb1": "Data"}
 
     monkeypatch.setattr(enumerator.psutil, "disk_partitions", fake_partitions)
-    assert enumerator.enumerate_system_mounts() == [MountInfo("/dev/sda1", "/", "ext4", False)]
+    monkeypatch.setattr(enumerator, "read_device_labels", fake_labels)
+    result = enumerator.enumerate_system_mounts()
     assert calls == [True]
+    assert seen == [["/dev/sda1", "/dev/sdb1"]]
+    assert [m.label for m in result] == ["System", "Data", "share"]

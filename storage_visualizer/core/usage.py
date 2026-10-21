@@ -7,7 +7,7 @@ from storage_visualizer.core.models import MountInfo, Volume
 
 
 def _base(mount: MountInfo) -> tuple[str, str, str, bool]:
-    return (mount.mount_point, mount.mount_point, mount.fstype, mount.is_network)
+    return (mount.mount_point, mount.label, mount.fstype, mount.is_network)
 
 
 def unavailable(mount: MountInfo) -> Volume:

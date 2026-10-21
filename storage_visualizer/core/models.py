@@ -8,6 +8,7 @@ class MountInfo:
     mount_point: str
     fstype: str
     is_network: bool
+    label: str = ""
 
 
 @dataclass(frozen=True)
