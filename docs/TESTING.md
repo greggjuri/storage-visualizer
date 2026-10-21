@@ -23,7 +23,7 @@
 ## Automated Tests
 
 ```bash
-pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=100
+.venv/bin/pytest --cov=storage_visualizer.core --cov-report=term-missing --cov-fail-under=100
 ruff check . && ruff format --check .
 ```
 
@@ -38,7 +38,7 @@ Required before finishing any branch that touches:
 - Window, tray, app id or autostart
 
 ### Setup
-1. `pipx install --force .` (or `python -m storage_visualizer` from the checkout)
+1. `pipx install --force .` (or `.venv/bin/python -m storage_visualizer` from the checkout; Debian has no `python`, and the deps live in `.venv`)
 2. Have a USB drive and an NFS or SMB share available
 3. Keep these handy:
    - Numbers: `df -h`
@@ -47,7 +47,7 @@ Required before finishing any branch that touches:
    - USB: mount through the KDE device notifier, confirm the path with `findmnt`
 
 ### Checklist
-- [ ] Numbers match `df -h` for every shown volume
+- [ ] Every pie's label follows the label rules (the Labels bullet under PLANNING.md Volume Rules); `<used> used · <free> free` / `<total> total` match `df -h` Used / Avail / Size exactly; no number is elided
 - [ ] Plug in a USB drive → pie appears within 30 s; unmount → pie disappears
 - [ ] Existing pies don't flicker to "…" on a tick
 - [ ] Thread count returns to baseline between polls
@@ -69,6 +69,7 @@ Required before finishing any branch that touches:
 | Window not pinned | Not on top / wrong position after login | KWin rule must match app id `storage-visualizer` |
 | Stale "unavailable" after recovery | Share answers but its pie stays grey for a poll | Release the busy flag and deliver the result under the probe lock (ADR-011) |
 | Free space off vs `df` | Free differs by reserved blocks | Use `f_bavail`, not `f_bfree` |
+| Label shows `\x20` | by-label name not decoded | `decode_udev` (core/labels.py) |
 
 ## Testing Patterns
 

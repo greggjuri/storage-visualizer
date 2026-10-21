@@ -7,7 +7,7 @@ import pytest
 from storage_visualizer.core.models import MountInfo, Volume
 from storage_visualizer.core.usage import UsageProbe, probe, unavailable
 
-MOUNT = MountInfo("/dev/sdd1", "/mnt/backup", "ext4", False)
+MOUNT = MountInfo("/dev/sdd1", "/mnt/backup", "ext4", False, "backup")
 
 
 def fake(path):
@@ -18,7 +18,7 @@ def test_probe_computes_df_numbers():
     v = probe(MOUNT, fake)
     assert v == Volume(
         "/mnt/backup",
-        "/mnt/backup",
+        "backup",
         "ext4",
         False,
         "ok",
@@ -41,7 +41,7 @@ def test_probe_oserror_is_unavailable(exc):
 
     v = probe(MOUNT, boom)
     assert (v.status, v.total, v.used, v.free) == ("unavailable", None, None, None)
-    assert v.mount_point == "/mnt/backup" and v.label == "/mnt/backup"
+    assert v.mount_point == "/mnt/backup" and v.label == "backup"
 
 
 def test_probe_all_one_result_per_mount():
@@ -269,3 +269,7 @@ def test_thread_start_failure_frees_mount_and_reraises(monkeypatch):
             p.probe_all([A], lambda v: None)
     [t] = p.probe_all([A], lambda v: None)
     t.join(5)
+
+
+def test_unavailable_keeps_label():
+    assert unavailable(MOUNT).label == "backup"

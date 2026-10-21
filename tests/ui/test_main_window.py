@@ -162,3 +162,10 @@ def test_window_grows_immediately_when_pie_added(qtbot):
     before = w.width()
     w.set_mounts([mi("/"), mi("/home")])
     assert w.width() > before  # adjustSize sees the new pie without processEvents()
+
+
+def test_new_pie_gets_mount_label(qtbot):
+    w = MainWindow()
+    qtbot.addWidget(w)
+    w.set_mounts([MountInfo("/dev/sda2", "/mnt/hoepsis", "ntfs3", False, "Hoepsis")])
+    assert w.pies["/mnt/hoepsis"].label == "Hoepsis"

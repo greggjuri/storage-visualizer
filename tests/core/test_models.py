@@ -19,3 +19,11 @@ def test_mountinfo_fields():
         "ext4",
         False,
     )
+
+
+def test_mountinfo_label_defaults_empty():
+    assert MountInfo("/dev/sda1", "/mnt/x", "ext4", False).label == ""
+
+
+def test_mountinfo_label_field():
+    assert MountInfo("/dev/sda1", "/mnt/x", "ext4", False, "X").label == "X"
