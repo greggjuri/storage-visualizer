@@ -70,7 +70,7 @@ class Volume:
 - Drop: pseudo filesystems (tmpfs, proc, sysfs, overlay, squashfs, efivarfs, etc.), loop devices, and mounts under `/boot`, `/snap`, `/sys`, `/proc`, `/run` (except `/run/media`).
 - Dedupe by device: btrfs subvolumes and bind mounts of the same device show once, under the shortest mount point.
 - Labels, resolved at enumerate time (ADR-012), from the kept partition:
-  - Network: the last path component of the source (trailing `/` stripped), else the mount point's last component.
+  - Network: the last path component of the source after dropping `//host` for CIFS/SMB sources, or everything through the first `:` otherwise (NFS, sshfs); trailing `/` stripped; empty → the mount point's last component.
   - Local: `/` is `System`; else the by-label name (udev `\xNN` escapes decoded); else the mount point's last component.
 
 ## Key Constraints

@@ -47,7 +47,7 @@ Required before finishing any branch that touches:
    - USB: mount through the KDE device notifier, confirm the path with `findmnt`
 
 ### Checklist
-- [ ] Every pie's label follows the label rules (PLANNING.md Volume Rules → Labels); `<used> used · <free> free` / `<total> total` match `df -h` Used / Avail / Size exactly; no number is elided
+- [ ] Every pie's label follows the label rules (the Labels bullet under PLANNING.md Volume Rules); `<used> used · <free> free` / `<total> total` match `df -h` Used / Avail / Size exactly; no number is elided
 - [ ] Plug in a USB drive → pie appears within 30 s; unmount → pie disappears
 - [ ] Existing pies don't flicker to "…" on a tick
 - [ ] Thread count returns to baseline between polls
