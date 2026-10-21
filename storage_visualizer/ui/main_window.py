@@ -20,7 +20,8 @@ class MainWindow(QWidget):
 
     def set_mounts(self, mounts: list[MountInfo]) -> None:
         """Add and remove pies by mount point; pies still present keep their last volume."""
-        wanted = {m.mount_point for m in mounts}
+        by_mp = {m.mount_point: m for m in mounts}
+        wanted = set(by_mp)
         removed = [mp for mp in self._pies if mp not in wanted]
         for mp in removed:
             pie = self._pies.pop(mp)
@@ -30,7 +31,7 @@ class MainWindow(QWidget):
         added = sorted(wanted - self._pies.keys())
         for mp in added:
             index = sum(1 for existing in self._pies if existing < mp)
-            pie = PieWidget(mp)
+            pie = PieWidget(mp, by_mp[mp].label)
             self._pies[mp] = pie
             self._layout.insertWidget(index, pie)
             pie.show()  # Qt defers the show; adjustSize would size without the new pie
