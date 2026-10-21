@@ -1,10 +1,11 @@
+import errno
 import threading
 from types import SimpleNamespace
 
 import pytest
 
 from storage_visualizer.core.models import MountInfo, Volume
-from storage_visualizer.core.usage import UsageProbe, probe
+from storage_visualizer.core.usage import UsageProbe, probe, unavailable
 
 MOUNT = MountInfo("/dev/sdd1", "/mnt/backup", "ext4", False)
 
@@ -92,15 +93,92 @@ def blocking():
     return statvfs, release
 
 
-def test_probe_all_skips_busy_mount_but_probes_others():
+def test_unavailable_matches_probe_oserror():
+    def boom(path):
+        raise OSError("gone")
+
+    assert unavailable(MOUNT) == probe(MOUNT, boom)
+
+
+def test_errno_oserror_is_unavailable_and_mount_reprobed():
+    def stale(path):
+        raise OSError(errno.ESTALE, "Stale file handle")
+
+    p, results = UsageProbe(stale), []
+    [t] = p.probe_all([A], results.append)
+    t.join(5)
+    assert results == [unavailable(A)]
+    [t2] = p.probe_all([A], results.append)
+    t2.join(5)
+
+
+def test_busy_mount_reports_unavailable_and_probes_others():
     statvfs, release = blocking()
-    p = UsageProbe(statvfs)
-    [first] = p.probe_all([A], lambda v: None)
-    second = p.probe_all([A, B], lambda v: None)
+    p, results = UsageProbe(statvfs), []
+    [first] = p.probe_all([A], results.append)
+    second = p.probe_all([A, B], results.append)
+    assert results == [unavailable(A)]  # synchronous: reported before probe_all returned
     assert len(second) == 1  # only B started
     release.set()
     first.join(5)
     second[0].join(5)
+
+
+def test_late_result_recovers_and_mount_is_probed_again():
+    statvfs, release = blocking()
+    p, results = UsageProbe(statvfs), []
+    [first] = p.probe_all([A], results.append)
+    p.probe_all([A], results.append)
+    release.set()
+    first.join(5)
+    assert [v.status for v in results] == ["unavailable", "ok"]
+    [again] = p.probe_all([A], results.append)
+    again.join(5)
+
+
+def test_fresh_result_is_never_followed_by_stale_unavailable():
+    statvfs, release = blocking()
+    p, results = UsageProbe(statvfs), []
+    in_cb, go = threading.Event(), threading.Event()
+
+    def cb(v):
+        results.append(v)
+        if not in_cb.is_set():
+            in_cb.set()
+            go.wait(5)  # worker parks inside on_result, holding the lock
+
+    [worker] = p.probe_all([A], cb)
+    release.set()
+    assert in_cb.wait(5)
+    started, ticking = [], threading.Event()
+
+    def tick_body():
+        ticking.set()
+        started.extend(p.probe_all([A], cb))
+
+    tick = threading.Thread(target=tick_body)
+    tick.start()
+    assert ticking.wait(5)
+    tick.join(0.2)
+    assert tick.is_alive()  # busy check waits for the worker's delivery
+    go.set()
+    tick.join(5)
+    worker.join(5)
+    for t in started:
+        t.join(5)
+    assert [v.status for v in results] == ["ok", "ok"]  # mount was idle: fresh probe
+
+
+def test_close_suppresses_late_results_and_new_probes():
+    statvfs, release = blocking()
+    p, results = UsageProbe(statvfs), []
+    [t] = p.probe_all([A], results.append)
+    p.close()
+    release.set()
+    t.join(5)
+    assert results == []
+    assert p.probe_all([A, B], results.append) == []
+    assert results == []
 
 
 def test_probe_all_mount_eligible_again_after_probe_returns():
@@ -116,17 +194,30 @@ def test_probe_all_mount_eligible_again_after_probe_returns():
 
 def test_probe_all_duplicate_mount_points_start_one_thread():
     statvfs, release = blocking()
-    threads = UsageProbe(statvfs).probe_all([A, A], lambda v: None)
+    results = []
+    threads = UsageProbe(statvfs).probe_all([A, A], results.append)
     assert len(threads) == 1
+    assert results == []  # overmount duplicate: skipped silently, no unavailable flicker
     release.set()
     threads[0].join(5)
 
 
+def test_mount_busy_from_previous_tick_reports_unavailable_once_when_duplicated():
+    statvfs, release = blocking()
+    p, results = UsageProbe(statvfs), []
+    [first] = p.probe_all([A], results.append)
+    assert p.probe_all([A, A], results.append) == []  # still busy: no new thread
+    assert results == [unavailable(A)]  # reported once, duplicate skipped
+    release.set()
+    first.join(5)
+
+
 def test_stuck_mount_costs_one_thread_over_many_polls():
     statvfs, release = blocking()
-    p = UsageProbe(statvfs)
-    started = [t for _ in range(5) for t in p.probe_all([A], lambda v: None)]
+    p, results = UsageProbe(statvfs), []
+    started = [t for _ in range(5) for t in p.probe_all([A], results.append)]
     assert len(started) == 1
+    assert results == [unavailable(A)] * 4
     release.set()
     started[0].join(5)
 

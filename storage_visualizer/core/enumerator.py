@@ -32,6 +32,7 @@ PSEUDO_FSTYPES = frozenset(
         "nsfs",
     }
 )
+NETWORK_FSTYPES = frozenset({"nfs", "nfs4", "cifs", "smb3", "fuse.sshfs"})  # ADR-003
 SYSTEM_TREES = ("/boot", "/snap", "/sys", "/proc", "/run")
 SYSTEM_TREE_EXCEPTIONS = ("/run/media",)
 
@@ -49,10 +50,11 @@ def _is_system_mount(mount_point: str) -> bool:
 def enumerate_mounts(partitions: Iterable[Any]) -> list[MountInfo]:
     best: dict[str, Any] = {}
     for part in partitions:
-        if not part.device.startswith("/dev/"):
-            continue
-        if part.device.startswith("/dev/loop"):
-            continue
+        if part.fstype not in NETWORK_FSTYPES:
+            if not part.device.startswith("/dev/"):
+                continue
+            if part.device.startswith("/dev/loop"):
+                continue
         if part.fstype in PSEUDO_FSTYPES:
             continue
         if _is_system_mount(part.mountpoint):
@@ -61,7 +63,10 @@ def enumerate_mounts(partitions: Iterable[Any]) -> list[MountInfo]:
         key = (len(part.mountpoint), part.mountpoint)
         if current is None or key < (len(current.mountpoint), current.mountpoint):
             best[part.device] = part
-    mounts = [MountInfo(p.device, p.mountpoint, p.fstype, False) for p in best.values()]
+    mounts = [
+        MountInfo(p.device, p.mountpoint, p.fstype, p.fstype in NETWORK_FSTYPES)
+        for p in best.values()
+    ]
     return sorted(mounts, key=lambda m: m.mount_point)
 
 
