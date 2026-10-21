@@ -27,13 +27,52 @@ def test_result_fields():
     assert m == MountInfo("/dev/sdd1", "/mnt/backup", "ext4", False)
 
 
-def test_drops_non_dev_devices_including_network():
+@pytest.mark.parametrize(
+    "device,fstype",
+    [
+        ("server:/export", "nfs"),
+        ("server:/export", "nfs4"),
+        ("//nas/share", "cifs"),
+        ("//nas/share", "smb3"),
+        ("user@host:/", "fuse.sshfs"),
+    ],
+)
+def test_keeps_network_filesystems_flagged(device, fstype):
+    [m] = enumerate_mounts([Part(device, "/mnt/net", fstype, "")])
+    assert m == MountInfo(device, "/mnt/net", fstype, True)
+
+
+def test_local_mounts_not_flagged_network():
+    [m] = enumerate_mounts([Part("/dev/sdd1", "/mnt/backup", "ext4", "")])
+    assert m.is_network is False
+
+
+@pytest.mark.parametrize(
+    "device,fstype",
+    [("portal", "fuse.portal"), ("gvfsd-fuse", "fuse.gvfsd-fuse"), ("tmpfs", "tmpfs")],
+)
+def test_drops_other_non_dev_devices(device, fstype):
+    assert mps([Part(device, "/mnt/x", fstype, "")]) == []
+
+
+def test_network_mounts_respect_system_trees():
+    assert mps([Part("server:/export", "/run/user/1000/x", "nfs", "")]) == []
+
+
+def test_network_mounts_dedupe_by_device():
     parts = [
-        Part("server:/export", "/mnt/nfs", "nfs4", ""),
-        Part("//nas/share", "/mnt/smb", "cifs", ""),
-        Part("tmpfs", "/tmp", "tmpfs", ""),
+        Part("server:/export", "/mnt/nfs/deep", "nfs", ""),
+        Part("server:/export", "/mnt/nfs", "nfs", ""),
     ]
-    assert mps(parts) == []
+    assert mps(parts) == ["/mnt/nfs"]
+
+
+def test_two_exports_from_one_server_are_two_mounts():
+    parts = [
+        Part("192.168.1.184:/volume1/media", "/mnt/nas-media", "nfs", ""),
+        Part("192.168.1.184:/volume2/media-4k", "/mnt/nas-media-4k", "nfs", ""),
+    ]
+    assert mps(parts) == ["/mnt/nas-media", "/mnt/nas-media-4k"]
 
 
 def test_drops_loop_devices():
