@@ -11,7 +11,7 @@ Each pie shows a readable name and, under it, used / free / total formatted exac
 ## Context
 
 - **ADR-003**: `psutil.disk_partitions(all=True)` plus our own filters; dedupe by device, shortest mount point wins. Labels are computed after dedupe, from the kept partition.
-- **ADR-004 / ADR-011**: the UI thread never blocks on a mounted filesystem; `statvfs` runs in per-mount workers. Reading `/dev/disk/by-label` (devtmpfs) happens on the UI thread at enumerate time; recorded as **ADR-012** (see Decisions).
+- **ADR-004 / ADR-011**: the UI thread never blocks on a mounted filesystem; `statvfs` runs in per-mount workers. Reading `/dev/disk/by-label` (devtmpfs) happens on the UI thread at enumerate time; proposed as **ADR-012** (see Decisions).
 - **ADR-008**: `PieWidget` draws with `QPainter`; this design adds two text lines.
 - **ADR-009 / ADR-010**: results arrive one `Volume` at a time; the `Refresher` calls `enumerate_fn()` every tick. `enumerate_system_mounts` stays the default `enumerate_fn`.
 - **PLANNING.md**: Data Models (`MountInfo`, `Volume.label`), Tech Stack ("`/dev/disk/by-label` (labels)"), Testing Approach, Success Criteria ("label, used/free and total that match `df -h`"), 500-line limit, `core/` never imports Qt.
@@ -174,5 +174,5 @@ Plus edge cases: `1023` → `1023`, `1024` → `1.0K`, `10239` → `10K` (9.999K
 
 ## Decisions
 
-- **ADR-012 (new, Accepted)**: `/dev/disk/by-label` is read on the UI thread at enumerate time. devtmpfs is a kernel pseudo-filesystem and cannot block like a mounted network filesystem, the same reasoning that already allows psutil's `/proc/self/mounts` read there. Alternative rejected: resolving labels in the probe worker (no label while loading or when unavailable, and label lookup repeated per probe).
+- **ADR-012 (new, Proposed; flipped to Accepted at finish via recording-decisions)**: `/dev/disk/by-label` is read on the UI thread at enumerate time. devtmpfs is a kernel pseudo-filesystem and cannot block like a mounted network filesystem, the same reasoning that already allows psutil's `/proc/self/mounts` read there. Alternative rejected: resolving labels in the probe worker (no label while loading or when unavailable, and label lookup repeated per probe).
 - **Key Principle 2** in DECISIONS.md is reworded to the rule it protects: "The UI thread never makes calls that can block on a mounted filesystem (statvfs etc.); reading kernel pseudo-filesystems (/proc, devtmpfs under /dev) is fine. Usage probes run in per-mount workers (ADR-004/011)." (Plan's docs task.)
