@@ -102,7 +102,7 @@ Call `disk_partitions(all=True)` and filter it ourselves:
 ## ADR-004: Probe usage in per-mount worker threads with timeout, no re-dispatch while stuck
 
 **Date**: 2026-10-17
-**Status**: Accepted
+**Status**: Superseded by ADR-011
 
 ### Context
 `statvfs()` on a hard-mounted NFS share whose server is gone blocks in uninterruptible kernel sleep. It can't be cancelled, only abandoned.
@@ -269,6 +269,7 @@ ADR-004 needs `statvfs` off the UI thread, with one worker per mount. `core/` mu
 ### Decision
 - `core.usage.UsageProbe.probe_all(mounts, on_result)` starts one plain `threading.Thread` per mount and calls `on_result(volume)` from the worker.
 - `ui/` passes `ResultBridge.volume_ready.emit` as `on_result`. `volume_ready` is a `Signal(object)` on a `QObject` that lives on the UI thread, so Qt queues delivery to the UI thread.
+- Since ADR-011, "unavailable" for a mount still busy at the next tick is emitted from `probe_all` on the UI thread, so Qt delivers that one directly; see ADR-011.
 
 ### Rationale
 - Probing stays in `core/`, testable with a fake `statvfs` and no Qt.
@@ -327,7 +328,7 @@ A `Refresher(QObject)` in `ui/refresher.py` owns the timer and a single `UsagePr
 ## ADR-011: No probe timeout; a probe still busy at the next tick reports unavailable
 
 **Date**: 2026-10-20
-**Status**: Proposed
+**Status**: Accepted
 
 **Supersedes**: ADR-004
 
@@ -348,13 +349,13 @@ ADR-004 planned a 2 s wait per probe before marking a volume unavailable. The ne
 ### Alternatives Considered
 | Option | Pros | Cons | Verdict |
 |---|---|---|---|
-| Busy at next tick → unavailable, late result recovers | One clock; no timer per probe; automatic recovery | Hang detection takes up to 30 s; `on_result` runs under the probe lock | Accepted (on finish) |
+| Busy at next tick → unavailable, late result recovers | One clock; no timer per probe; automatic recovery | Hang detection takes up to 30 s; `on_result` runs under the probe lock | Accepted |
 | 2 s wait per probe (ADR-004) | Fast detection | Second timing mechanism; refresh waits on the slowest mount; nothing to gain for trusted shares | Rejected |
 | Subprocess per probe | Killable from our side | Can still hang in D-state; spawn cost every poll | Rejected |
 
 ### Consequences
 **Positive:** Simpler probe, no timer threads; a recovered share shows correct numbers as soon as its call returns.
-**Negative:** A share that hangs on its first probe shows "…" for up to 30 s before "unavailable". `on_result` must be quick and must not re-enter the probe ("unavailable" is delivered directly on the UI thread while the lock is held). A dead hard-mounted NFS share can stall process exit.
+**Negative:** A share that hangs on its first probe shows "…" for up to 30 s before "unavailable". `on_result` must be quick and must not re-enter the probe ("unavailable" is delivered directly on the UI thread while the lock is held). A dead hard-mounted NFS share can stall process exit. The busy set is keyed by mount point, so a remount at the same path while the old probe is stuck shows "unavailable" until restart.
 
 ### References
 - Spec: `docs/superpowers/specs/2026-10-20-network-share-probe-design.md`

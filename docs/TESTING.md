@@ -52,7 +52,7 @@ Required before finishing any branch that touches:
 - [ ] Existing pies don't flicker to "…" on a tick
 - [ ] Thread count returns to baseline between polls
 - [ ] Stop the NFS/SMB server → that pie shows "unavailable" within one poll after the probe hangs, the UI stays responsive, and the thread count stays flat over several polls
-- [ ] Tray icon shows/hides the window
+- [ ] Tray icon shows/hides the window; tray Quit → clean exit, no traceback (N/A until the tray lands)
 - [ ] Close the window → clean exit, no traceback
 - [ ] Ctrl+C in the terminal → exits immediately, no traceback
 - [ ] KWin rule keeps the window on top and in place across logout/login

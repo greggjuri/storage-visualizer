@@ -2,7 +2,7 @@
 
 **Date**: 2026-10-20
 **Backlog item**: "Network share probe" (docs/TASK.md, Next)
-**Status**: Approved, not yet implemented (branch feat/network-share-probe)
+**Status**: Implemented (branch feat/network-share-probe)
 
 ## Goal
 

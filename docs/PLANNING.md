@@ -90,7 +90,7 @@ class Volume:
 - Manual checklist for `docs/TESTING.md` (replaces the web template's DevTools checklist):
   - plug in a USB drive → pie appears within 30 s; unmount → pie disappears
   - stop the NFS/SMB server → that pie shows "unavailable" within one poll, the UI stays responsive, and the thread count stays flat over several polls
-  - tray icon shows/hides the window
+  - tray icon shows/hides the window; tray Quit → clean exit, no traceback
   - close the window → clean exit; Ctrl+C in the terminal → exits immediately; no traceback either way
   - KWin rule keeps the window on top and in place across logout/login
   - numbers match `df -h` for every shown volume
