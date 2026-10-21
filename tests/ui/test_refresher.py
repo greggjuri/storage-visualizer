@@ -1,6 +1,11 @@
+import faulthandler
+import threading
+from types import SimpleNamespace
+
 from PySide6.QtWidgets import QLabel
 
 from storage_visualizer.core.models import MountInfo, Volume
+from storage_visualizer.core.usage import UsageProbe, unavailable
 from storage_visualizer.ui import refresher
 from storage_visualizer.ui.bridge import ResultBridge
 from storage_visualizer.ui.main_window import MainWindow
@@ -26,6 +31,9 @@ class FakeProbe:
         for v in self.volumes:
             on_result(v)  # synchronous, on the UI thread
         return []
+
+    def close(self):
+        self.log.append(("close",))
 
 
 def test_interval_and_timeout_wired_to_refresh(qtbot):
@@ -101,3 +109,39 @@ def test_empty_enumeration_clears_window(qtbot):
     r.refresh()
     assert w.pies == {} and not w.findChild(QLabel).isHidden()
     assert log[-1] == ("probe_all", [])
+
+
+def test_stop_stops_timer_and_closes_probe(qtbot):
+    log = []
+    r = Refresher(FakeWindow(log), ResultBridge(), FakeProbe(log), enumerate_fn=lambda: M)
+    r.start()
+    r.stop()
+    assert not r.timer.isActive() and log[-1] == ("close",)
+    r.stop()  # idempotent
+
+
+NET = MountInfo("server:/export", "/mnt/net", "nfs", True)
+
+
+def test_busy_share_unavailable_then_recovers_through_real_bridge(qtbot):
+    faulthandler.dump_traceback_later(5, exit=True)  # a deadlock kills the run with a stack dump
+    try:
+        release = threading.Event()
+
+        def statvfs(path):
+            release.wait(5)
+            return SimpleNamespace(f_frsize=4096, f_blocks=1000, f_bfree=300, f_bavail=250)
+
+        w = MainWindow()
+        qtbot.addWidget(w)
+        bridge = ResultBridge()
+        bridge.volume_ready.connect(w.update_volume)
+        r = Refresher(w, bridge, UsageProbe(statvfs), enumerate_fn=lambda: [NET])
+        r.refresh()  # worker parks in statvfs
+        r.refresh()  # busy: unavailable delivered directly, under the probe lock
+        assert w.pies["/mnt/net"].volume == unavailable(NET)
+        release.set()
+        qtbot.waitUntil(lambda: w.pies["/mnt/net"].volume.status == "ok", timeout=5000)
+        r.stop()
+    finally:
+        faulthandler.cancel_dump_traceback_later()

@@ -39,6 +39,12 @@ class Refresher(QObject):
         self._timer.start()
 
     @Slot()
+    def stop(self) -> None:
+        """On aboutToQuit: no more ticks, and no result reaches the bridge after this."""
+        self._timer.stop()
+        self._probe.close()
+
+    @Slot()
     def refresh(self) -> None:
         mounts = self._enumerate()
         self._window.set_mounts(mounts)
