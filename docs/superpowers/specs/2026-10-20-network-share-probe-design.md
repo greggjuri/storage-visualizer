@@ -104,6 +104,8 @@ A non-`OSError` from `probe` still frees the mount and reaches `threading.except
 
 After the Refresher is created: `app.aboutToQuit.connect(refresher.stop)`. `aboutToQuit` fires on the UI thread before `app.exec()` returns and before the bridge is torn down, so no worker can emit on a deleted `ResultBridge` afterwards. Disconnecting the signal instead would not fix this, because emitting on an already-deleted C++ object raises regardless.
 
+`main()` also calls `signal.signal(signal.SIGINT, signal.SIG_DFL)` before `app.exec()`, with this comment: Python can't run its SIGINT handler while `app.exec()` blocks in C++, so Ctrl+C would only land at the next tick, as a `KeyboardInterrupt` traceback inside `refresh()`. With `SIG_DFL`, Ctrl+C terminates the process immediately. The graceful quit path (`aboutToQuit` → `Refresher.stop`) is closing the window. There's no wake-up timer to let Python handle the signal, because that would cost idle CPU.
+
 ### main_window.py, bridge.py, pie_widget.py
 
 Unchanged. `PieWidget` already renders `status == "unavailable"`; `update_volume` already ignores unknown mount points.
@@ -119,6 +121,7 @@ Unchanged. `PieWidget` already renders `status == "unavailable"`; `update_volume
 | `probe` raises non-`OSError` | Mount freed, no result; traceback to `threading.excepthook`; next tick re-probes. The non-OSError Known Issue still applies |
 | `on_result` raises | Lock released, mount freed; traceback to `threading.excepthook` |
 | Result after quit | Suppressed by `close()` via `aboutToQuit` |
+| Ctrl+C in the terminal | `SIG_DFL`: process terminates immediately; no `aboutToQuit`, no traceback |
 | Hard-mounted NFS share dead at quit | Process exit can stall: a daemon thread sits in uninterruptible sleep in `statvfs`. Accepted because shares are trusted to be available; recorded in TASK.md Known Issues |
 
 ## Testing
@@ -162,7 +165,8 @@ The agent cannot see the window. The plan stops here, the human runs the checks 
 
 - [ ] Every mounted network share of a kept fstype (`findmnt -t nfs,nfs4,cifs,smb3,fuse.sshfs`) has exactly one pie, and its numbers match `df -h`.
 - [ ] Local pies are unchanged and still match `df -h`.
-- [ ] Quit (Ctrl+C, or close the window) exits with no traceback in the terminal.
+- [ ] Close the window → clean exit, no traceback in the terminal (exercises `aboutToQuit` → `Refresher.stop` → `close()`).
+- [ ] Ctrl+C in the terminal → exits immediately, no traceback.
 - [ ] No tracebacks over several polls.
 - **Not run on this branch, covered by unit tests:** stopping the NFS/SMB server ("unavailable" within one poll, flat thread count). Shares are trusted to be available, so the human won't take them offline.
 - N/A: tray, KWin rule.
