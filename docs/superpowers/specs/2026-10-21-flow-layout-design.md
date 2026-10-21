@@ -52,12 +52,12 @@ So MainWindow never calls `adjustSize()` again. It owns the window size through 
 - **`_available_width()`** returns `self.screen().availableGeometry().width()`. A separate method so tests can monkeypatch it.
 - **`_fit_height()`**:
   - Width: if the window has never been shown, `min(self._layout.sizeHint().width(), self._available_width())`, applied with `resize(width, …)`. Once shown, the current `width()`; the app never changes the width after the first show.
-  - Height: `h = self._layout.totalHeightForWidth(width)`; if `h` differs from the current fixed height, `setFixedHeight(h)` (sets minimum and maximum height together).
+  - Height: `h = self._layout.totalHeightForWidth(width)`; if `h` or the layout's minimum width differ from the window's current limits, `setMinimumSize(layout.minimumSize().width(), h)` and `setMaximumHeight(h)` (minimum = maximum height). Not `setFixedHeight`: it marks the current minimum width as explicit, so Qt would stop updating it from the layout.
 - **Called from**:
   - the end of `set_mounts` when pies were added or removed, replacing `adjustSize()`;
-  - `resizeEvent` when the width changed (`event.size().width() != event.oldSize().width()`). The guard on `h` stops the `setFixedHeight → resizeEvent` loop.
+  - `resizeEvent` when the width changed (`event.size().width() != event.oldSize().width()`). The guard on `h` stops the clamp → `resizeEvent` loop.
 - **`pie.show()` stays before `_fit_height()`** in `set_mounts`. A child widget that was never shown is still `isHidden()` until `show()`, so `FlowLayout` would count it as empty and size the window without it.
-- **Why min/max instead of `resize()`**: `setFixedHeight` hands the compositor a minimum and maximum height. During a drag KWin limits the height itself instead of the app correcting it afterwards, and a size forced by a KWin rule (a stale remembered height) is clamped to the fitted height. The minimum width comes from `FlowLayout.minimumSize()` through Qt's default size constraint.
+- **Why min/max instead of `resize()`**: Equal minimum and maximum heights hand the compositor a minimum and maximum height. During a drag KWin limits the height itself instead of the app correcting it afterwards, and a size forced by a KWin rule (a stale remembered height) is clamped to the fitted height. The minimum width (one pie) is set explicitly from `FlowLayout.minimumSize()`.
 
 ## Error Handling
 
@@ -91,8 +91,8 @@ Smoke tests only (ui/); `core/` is unchanged, so the 100% `core/` coverage gate 
 
 ## Decisions
 
-**ADR-013 (Proposed): Window height clamped to the flow's heightForWidth; width owned by the user and KWin.** MainWindow sets `setFixedHeight(layout.totalHeightForWidth(width()))` on mount changes and width changes and never calls `adjustSize()` after this change; the first-launch width is the one-row width capped at the available screen width. Rejected: clamping inside `FlowLayout.setGeometry` (re-entrant, mixes layout with window sizing); a scroll area (hides the problem instead of fitting the content); refitting with `resize()` only on mount changes (stale heights after a drag or a KWin-restored size). Becomes Accepted at finish via recording-decisions.
+**ADR-013 (Proposed): Window height clamped to the flow's heightForWidth; width owned by the user and KWin.** MainWindow clamps the height (minimum = maximum = `layout.totalHeightForWidth(width())`) on mount changes and width changes and never calls `adjustSize()` after this change; the first-launch width is the one-row width capped at the available screen width. Rejected: clamping inside `FlowLayout.setGeometry` (re-entrant, mixes layout with window sizing); a scroll area (hides the problem instead of fitting the content); refitting with `resize()` only on mount changes (stale heights after a drag or a KWin-restored size). Becomes Accepted at finish via recording-decisions.
 
 ## Follow-ups (TASK.md)
 
-- Frameless window item: without decorations, width changes need Alt+right-drag (KDE: Meta+right-drag by default), the KWin rule, or `startSystemResize` edges.
+- Frameless window item: without decorations, width changes need Meta+right-drag (Plasma 6 default), the KWin rule, or `startSystemResize` edges.
