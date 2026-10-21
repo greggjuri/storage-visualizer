@@ -124,24 +124,25 @@ NET = MountInfo("server:/export", "/mnt/net", "nfs", True)
 
 
 def test_busy_share_unavailable_then_recovers_through_real_bridge(qtbot):
-    faulthandler.dump_traceback_later(5, exit=True)  # a deadlock kills the run with a stack dump
+    faulthandler.dump_traceback_later(15, exit=True)  # a deadlock kills the run with a stack dump
+    release = threading.Event()
+
+    def statvfs(path):
+        release.wait(5)
+        return SimpleNamespace(f_frsize=4096, f_blocks=1000, f_bfree=300, f_bavail=250)
+
+    w = MainWindow()
+    qtbot.addWidget(w)
+    bridge = ResultBridge()
+    bridge.volume_ready.connect(w.update_volume)
+    r = Refresher(w, bridge, UsageProbe(statvfs), enumerate_fn=lambda: [NET])
     try:
-        release = threading.Event()
-
-        def statvfs(path):
-            release.wait(5)
-            return SimpleNamespace(f_frsize=4096, f_blocks=1000, f_bfree=300, f_bavail=250)
-
-        w = MainWindow()
-        qtbot.addWidget(w)
-        bridge = ResultBridge()
-        bridge.volume_ready.connect(w.update_volume)
-        r = Refresher(w, bridge, UsageProbe(statvfs), enumerate_fn=lambda: [NET])
         r.refresh()  # worker parks in statvfs
         r.refresh()  # busy: unavailable delivered directly, under the probe lock
         assert w.pies["/mnt/net"].volume == unavailable(NET)
         release.set()
         qtbot.waitUntil(lambda: w.pies["/mnt/net"].volume.status == "ok", timeout=5000)
-        r.stop()
     finally:
+        release.set()
+        r.stop()  # a failed assertion must not leave the worker emitting on a deleted bridge
         faulthandler.cancel_dump_traceback_later()

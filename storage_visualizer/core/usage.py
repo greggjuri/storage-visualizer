@@ -41,7 +41,10 @@ class UsageProbe:
     calling (UI) thread, so Qt delivers it directly, not queued, while the lock
     is held; worker results are emitted from the worker and queued. on_result
     must therefore be quick and must never call into this probe from either
-    thread, or it deadlocks.
+    thread, or it deadlocks. If on_result raises inside probe_all, the exception
+    propagates, the lock is released and the rest of that call's mounts are
+    skipped; a Qt signal emit prints and swallows slot exceptions, so with the
+    ResultBridge this does not happen.
     """
 
     def __init__(self, statvfs: Callable[[str], Any] = os.statvfs) -> None:
@@ -54,8 +57,11 @@ class UsageProbe:
         self, mounts: Iterable[MountInfo], on_result: Callable[[Volume], None]
     ) -> list[threading.Thread]:
         """Start one daemon thread per idle mount; report busy mounts unavailable."""
-        threads = []
+        threads, seen = [], set()
         for mount in mounts:
+            if mount.mount_point in seen:
+                continue  # overmounted path: one probe, no "unavailable" flicker
+            seen.add(mount.mount_point)
             with self._lock:
                 if self._closed:
                     return threads

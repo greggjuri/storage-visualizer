@@ -10,6 +10,11 @@ from storage_visualizer.ui.refresher import Refresher
 
 def main() -> int:
     app = QApplication(sys.argv)
+    # Python can't run its SIGINT handler while app.exec() blocks in C++, so Ctrl+C
+    # would only land at the next tick, as a KeyboardInterrupt traceback inside
+    # refresh(). SIG_DFL terminates immediately; the graceful quit (aboutToQuit ->
+    # Refresher.stop) is closing the window. No wake-up timer: idle CPU stays zero.
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     app.setApplicationName("storage-visualizer")
     app.setDesktopFileName("storage-visualizer")
 
@@ -21,9 +26,4 @@ def main() -> int:
     refresher.start()  # first refresh before show(): window opens at its final size
     window.show()
 
-    # Python can't run its SIGINT handler while app.exec() blocks in C++, so Ctrl+C
-    # would only land at the next tick, as a KeyboardInterrupt traceback inside
-    # refresh(). SIG_DFL terminates immediately; the graceful quit (aboutToQuit ->
-    # Refresher.stop) is closing the window. No wake-up timer: idle CPU stays zero.
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
     return app.exec()

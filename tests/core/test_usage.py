@@ -150,9 +150,15 @@ def test_fresh_result_is_never_followed_by_stale_unavailable():
     [worker] = p.probe_all([A], cb)
     release.set()
     assert in_cb.wait(5)
-    started = []
-    tick = threading.Thread(target=lambda: started.extend(p.probe_all([A], cb)))
+    started, ticking = [], threading.Event()
+
+    def tick_body():
+        ticking.set()
+        started.extend(p.probe_all([A], cb))
+
+    tick = threading.Thread(target=tick_body)
     tick.start()
+    assert ticking.wait(5)
     tick.join(0.2)
     assert tick.is_alive()  # busy check waits for the worker's delivery
     go.set()
@@ -191,7 +197,7 @@ def test_probe_all_duplicate_mount_points_start_one_thread():
     results = []
     threads = UsageProbe(statvfs).probe_all([A, A], results.append)
     assert len(threads) == 1
-    assert results == [unavailable(A)]
+    assert results == []  # overmount duplicate: skipped silently, no unavailable flicker
     release.set()
     threads[0].join(5)
 
