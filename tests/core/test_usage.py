@@ -202,6 +202,16 @@ def test_probe_all_duplicate_mount_points_start_one_thread():
     threads[0].join(5)
 
 
+def test_mount_busy_from_previous_tick_reports_unavailable_once_when_duplicated():
+    statvfs, release = blocking()
+    p, results = UsageProbe(statvfs), []
+    [first] = p.probe_all([A], results.append)
+    assert p.probe_all([A, A], results.append) == []  # still busy: no new thread
+    assert results == [unavailable(A)]  # reported once, duplicate skipped
+    release.set()
+    first.join(5)
+
+
 def test_stuck_mount_costs_one_thread_over_many_polls():
     statvfs, release = blocking()
     p, results = UsageProbe(statvfs), []
