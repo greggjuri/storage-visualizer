@@ -33,7 +33,7 @@ ruff check . && ruff format --check .
 
 Required before finishing any branch that touches:
 - Mount enumeration or filters
-- Usage probing, worker threads, timeouts
+- Usage probing, worker threads, busy-at-tick unavailable
 - Polling / pie diffing
 - Window, tray, app id or autostart
 
@@ -51,8 +51,10 @@ Required before finishing any branch that touches:
 - [ ] Plug in a USB drive → pie appears within 30 s; unmount → pie disappears
 - [ ] Existing pies don't flicker to "…" on a tick
 - [ ] Thread count returns to baseline between polls
-- [ ] Stop the NFS/SMB server → that pie shows "unavailable" within one poll, the UI stays responsive, and the thread count stays flat over several polls
-- [ ] Tray icon shows/hides the window; Quit exits cleanly
+- [ ] Stop the NFS/SMB server → that pie shows "unavailable" within one poll after the probe hangs, the UI stays responsive, and the thread count stays flat over several polls
+- [ ] Tray icon shows/hides the window
+- [ ] Close the window → clean exit, no traceback
+- [ ] Ctrl+C in the terminal → exits immediately, no traceback
 - [ ] KWin rule keeps the window on top and in place across logout/login
 - [ ] No tracebacks in the terminal / journal
 
@@ -65,6 +67,7 @@ Required before finishing any branch that touches:
 | UI freeze on dead share | Window stops repainting | Something called `statvfs` on the UI thread (ADR-004) |
 | Thread leak | `nlwp` grows every poll | Re-dispatch while a probe is still outstanding (ADR-004) |
 | Window not pinned | Not on top / wrong position after login | KWin rule must match app id `storage-visualizer` |
+| Stale "unavailable" after recovery | Share answers but its pie stays grey for a poll | Release the busy flag and deliver the result under the probe lock (ADR-011) |
 | Free space off vs `df` | Free differs by reserved blocks | Use `f_bavail`, not `f_bfree` |
 
 ## Testing Patterns

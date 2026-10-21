@@ -44,7 +44,7 @@ Default: strict TDD per Superpowers. Exceptions:
 ## Conventions
 
 - `core/` never imports Qt; each tick diffs the mount list to add/remove pies; results update pies one volume at a time (ADR-009).
-- The UI thread never calls `statvfs` (ADR-004).
+- The UI thread never calls `statvfs` (ADR-004, ADR-011).
 - Debian 13 + KDE Wayland only: no portability code (ADR-001).
 
 ## Gotchas

@@ -324,6 +324,44 @@ A `Refresher(QObject)` in `ui/refresher.py` owns the timer and a single `UsagePr
 
 ---
 
+## ADR-011: No probe timeout; a probe still busy at the next tick reports unavailable
+
+**Date**: 2026-10-20
+**Status**: Proposed
+
+**Supersedes**: ADR-004
+
+### Context
+ADR-004 planned a 2 s wait per probe before marking a volume unavailable. The network shares on this machine are trusted to be available. A timeout adds a second clock next to the 30 s tick, and a stuck `statvfs` can't be cancelled anyway.
+
+### Decision
+- No timeout. Each mount's `statvfs` runs in its own daemon thread (as before).
+- At each tick, a mount whose previous probe is still outstanding gets no new probe and is reported `unavailable` from `probe_all`.
+- When the stuck call returns, its result is delivered (the pie recovers) and the mount becomes eligible again.
+- Busy-flag release and result delivery happen under the same lock as the tick's busy check, so a stale "unavailable" never overwrites a fresh result.
+- `UsageProbe.close()` (called from `Refresher.stop()` on `aboutToQuit`) suppresses all later deliveries.
+
+### Rationale
+- One clock (the 30 s tick) detects hangs; no timer per probe.
+- Recovery is automatic and immediate when the stuck call returns.
+
+### Alternatives Considered
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| Busy at next tick → unavailable, late result recovers | One clock; no timer per probe; automatic recovery | Hang detection takes up to 30 s; `on_result` runs under the probe lock | Accepted (on finish) |
+| 2 s wait per probe (ADR-004) | Fast detection | Second timing mechanism; refresh waits on the slowest mount; nothing to gain for trusted shares | Rejected |
+| Subprocess per probe | Killable from our side | Can still hang in D-state; spawn cost every poll | Rejected |
+
+### Consequences
+**Positive:** Simpler probe, no timer threads; a recovered share shows correct numbers as soon as its call returns.
+**Negative:** A share that hangs on its first probe shows "…" for up to 30 s before "unavailable". `on_result` must be quick and must not re-enter the probe ("unavailable" is delivered directly on the UI thread while the lock is held). A dead hard-mounted NFS share can stall process exit.
+
+### References
+- Spec: `docs/superpowers/specs/2026-10-20-network-share-probe-design.md`
+- Plan: `docs/superpowers/plans/2026-10-20-network-share-probe.md`
+
+---
+
 ## Template for New Decisions
 
 ```markdown
@@ -392,5 +430,5 @@ Create an ADR when:
 ## Key Principles Captured in ADRs
 
 1. **core/ has no Qt imports**: all GUI code lives in ui/ (PLANNING.md, Architecture)
-2. **The UI thread never calls into the filesystem**: usage probes run in per-mount workers with a timeout (ADR-004)
+2. **The UI thread never calls into the filesystem**: usage probes run in per-mount workers; a probe still busy at the next tick reports unavailable (ADR-011)
 3. **Debian 13 + KDE Plasma 6 Wayland only**: no portability code (ADR-001)

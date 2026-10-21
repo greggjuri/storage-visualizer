@@ -14,8 +14,8 @@ A small always-available window on my Debian desktop that shows every mounted vo
 │  Enumerator  │ ──────────────────▶ │   UsageProbe    │ ─────────────────────▶ │     MainWindow       │
 │ psutil       │                     │ statvfs per     │                        │ frameless, flow      │
 │ all=True +   │                     │ mount in worker │                        │ layout of PieWidgets │
-│ own filters, │                     │ thread, 2 s     │                        │ (one per volume)     │
-│ dedupe, label│                     │ timeout         │                        └──────────▲───────────┘
+│ own filters, │                     │ thread; busy at │                        │ (one per volume)     │
+│ dedupe, label│                     │ tick=unavailable│                        └──────────▲───────────┘
 └──────────────┘                     └─────────────────┘                                   │ show/hide
                                                                                 ┌──────────┴───────────┐
                                                                                 │  TrayIcon (SNI/KDE)  │
@@ -25,7 +25,7 @@ core/  (Enumerator, UsageProbe, Volume)  — pure Python, no Qt imports, unit-te
 ui/    (MainWindow, PieWidget, FlowLayout, TrayIcon, Refresher) — PySide6
 ```
 
-Probe results reach the UI thread through plain `threading.Thread` workers in `core/` (one per mount) that call a callback, plus a queued `ResultBridge` (`Signal(object)` on a UI-thread `QObject`) in `ui/`. See ADR-009.
+Probe results reach the UI thread through plain `threading.Thread` workers in `core/` (one per mount) that call a callback, plus a queued `ResultBridge` (`Signal(object)` on a UI-thread `QObject`) in `ui/`. See ADR-009. A mount whose probe is still busy at the next tick is reported `unavailable` from `probe_all` on the UI thread, so Qt delivers that one directly; worker results are queued. A late result restores the pie (ADR-011).
 
 Data flows one way: timer tick → enumerate → diff the mount list to add/remove pies → probe; results update pies one volume at a time (ADR-009).
 
@@ -73,14 +73,14 @@ class Volume:
 
 - Debian 13 + KDE Plasma 6 Wayland only. No portability code.
 - Wayland: the app cannot position itself or force always-on-top. Both come from a KWin window rule the user sets once, matched on the app id. The app sets a stable app id (`QGuiApplication.setDesktopFileName("storage-visualizer")`).
-- A hung network mount must never block the UI thread or stack up threads (see ADR-004).
+- A hung network mount must never block the UI thread or stack up threads (ADR-004, ADR-011).
 - Max 500 lines per file
 - Conventional commits
 
 ## Non-Functional Requirements
 
 - **Resource use:** poll every 30 s; idle CPU effectively zero between polls; no busy loops or file watchers.
-- **Responsiveness:** the UI thread never calls `statvfs` directly. A full refresh, including timeouts, finishes within about 3 s.
+- **Responsiveness:** the UI thread never calls `statvfs` directly. A probe still running at the next tick shows its volume as unavailable; a late result restores it.
 - **Robustness:** a volume vanishing mid-poll, a dead NFS server or a permission error on one mount degrades that one pie, never the app.
 
 ## Testing Approach
@@ -90,7 +90,8 @@ class Volume:
 - Manual checklist for `docs/TESTING.md` (replaces the web template's DevTools checklist):
   - plug in a USB drive → pie appears within 30 s; unmount → pie disappears
   - stop the NFS/SMB server → that pie shows "unavailable" within one poll, the UI stays responsive, and the thread count stays flat over several polls
-  - tray icon shows/hides the window; Quit exits cleanly
+  - tray icon shows/hides the window
+  - close the window → clean exit; Ctrl+C in the terminal → exits immediately; no traceback either way
   - KWin rule keeps the window on top and in place across logout/login
   - numbers match `df -h` for every shown volume
 
