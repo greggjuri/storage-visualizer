@@ -49,11 +49,12 @@ class MountInfo:
     mount_point: str
     fstype: str
     is_network: bool
+    label: str = ""      # see Volume Rules → Labels
 
 @dataclass(frozen=True)
 class Volume:
     mount_point: str     # identity key for diffing
-    label: str           # by-label name, else mount point; "/" -> "System"
+    label: str           # copied from MountInfo.label
     fstype: str
     is_network: bool
     status: Literal["ok", "unavailable"]
@@ -68,6 +69,9 @@ class Volume:
 - Keep: block devices under `/dev/` and network filesystems (`nfs`, `nfs4`, `cifs`, `smb3`, `fuse.sshfs`).
 - Drop: pseudo filesystems (tmpfs, proc, sysfs, overlay, squashfs, efivarfs, etc.), loop devices, and mounts under `/boot`, `/snap`, `/sys`, `/proc`, `/run` (except `/run/media`).
 - Dedupe by device: btrfs subvolumes and bind mounts of the same device show once, under the shortest mount point.
+- Labels, resolved at enumerate time (ADR-012), from the kept partition:
+  - Network: the last path component of the source (trailing `/` stripped), else the mount point's last component.
+  - Local: `/` is `System`; else the by-label name (udev `\xNN` escapes decoded); else the mount point's last component.
 
 ## Key Constraints
 
@@ -80,7 +84,7 @@ class Volume:
 ## Non-Functional Requirements
 
 - **Resource use:** poll every 30 s; idle CPU effectively zero between polls; no busy loops or file watchers.
-- **Responsiveness:** the UI thread never calls `statvfs` directly. A probe still running at the next tick shows its volume as unavailable; a late result restores it.
+- **Responsiveness:** the UI thread never calls `statvfs` directly. A probe still running at the next tick shows its volume as unavailable; a late result restores it. `/dev/disk/by-label` is read at enumerate time (ADR-012).
 - **Robustness:** a volume vanishing mid-poll, a dead NFS server or a permission error on one mount degrades that one pie, never the app.
 
 ## Testing Approach
@@ -93,7 +97,7 @@ class Volume:
   - tray icon shows/hides the window; tray Quit → clean exit, no traceback
   - close the window → clean exit; Ctrl+C in the terminal → exits immediately; no traceback either way
   - KWin rule keeps the window on top and in place across logout/login
-  - numbers match `df -h` for every shown volume
+  - label follows the label rules; used/free/total match `df -h` Used/Avail/Size exactly, no number elided
 
 ## Success Criteria
 

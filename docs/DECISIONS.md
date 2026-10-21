@@ -363,6 +363,39 @@ ADR-004 planned a 2 s wait per probe before marking a volume unavailable. The ne
 
 ---
 
+## ADR-012: Read `/dev/disk/by-label` on the UI thread at enumerate time
+
+**Date**: 2026-10-20
+**Status**: Proposed
+
+### Context
+Each pie shows a volume label (spec: `docs/superpowers/specs/2026-10-20-volume-labels-design.md`). For local volumes the name comes from the udev links in `/dev/disk/by-label`. The UI thread must not block on a mounted filesystem (ADR-004, ADR-011), so reading that directory there needs a justification.
+
+### Decision
+`enumerate_system_mounts()` lists `/dev/disk/by-label` on the UI thread at every enumerate step and passes the result to the pure `enumerate_mounts()`. The label is stored on `MountInfo` and copied to `Volume`.
+
+### Rationale
+- `/dev` is devtmpfs, a kernel pseudo-filesystem. It cannot block like a mounted network filesystem, the same reasoning that already allows psutil's `/proc/self/mounts` read on the UI thread.
+- The label is known before the first probe, so a pie shows its name while loading and when unavailable.
+- One directory listing per tick, not one per probe.
+
+### Alternatives Considered
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| Read by-label on the UI thread at enumerate time | Label known before the probe; one read per tick; `core/` stays testable with `tmp_path` symlinks | Principle 2 had to be reworded to allow pseudo-filesystem reads | Accepted |
+| Resolve the label in the probe worker | UI thread does no filesystem read | No label while loading or unavailable; lookup repeated per probe | Rejected |
+| UDisks2 over D-Bus | Ready-made label | D-Bus dependency; contradicts ADR-003's psutil-plus-own-filters approach | Rejected |
+
+### Consequences
+**Positive:** Labels are available for every state of a pie. Missing or unreadable by-label directory falls back to the mount point name.
+**Negative:** A relabel shows up on the next tick, and an existing pie keeps its construction label until its next `Volume` arrives.
+
+### References
+- Spec: `docs/superpowers/specs/2026-10-20-volume-labels-design.md`
+- Plan: `docs/superpowers/plans/2026-10-20-volume-labels.md`
+
+---
+
 ## Template for New Decisions
 
 ```markdown
@@ -431,5 +464,5 @@ Create an ADR when:
 ## Key Principles Captured in ADRs
 
 1. **core/ has no Qt imports**: all GUI code lives in ui/ (PLANNING.md, Architecture)
-2. **The UI thread never calls into the filesystem**: usage probes run in per-mount workers; a probe still busy at the next tick reports unavailable (ADR-011)
+2. **The UI thread never makes calls that can block on a mounted filesystem** (statvfs etc.); reading kernel pseudo-filesystems (/proc, devtmpfs under /dev) is fine. Usage probes run in per-mount workers (ADR-004/011).
 3. **Debian 13 + KDE Plasma 6 Wayland only**: no portability code (ADR-001)

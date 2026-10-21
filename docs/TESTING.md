@@ -47,7 +47,7 @@ Required before finishing any branch that touches:
    - USB: mount through the KDE device notifier, confirm the path with `findmnt`
 
 ### Checklist
-- [ ] Numbers match `df -h` for every shown volume
+- [ ] Every pie's label follows the label rules (PLANNING.md Volume Rules → Labels); `<used> used · <free> free` / `<total> total` match `df -h` Used / Avail / Size exactly; no number is elided
 - [ ] Plug in a USB drive → pie appears within 30 s; unmount → pie disappears
 - [ ] Existing pies don't flicker to "…" on a tick
 - [ ] Thread count returns to baseline between polls
@@ -69,6 +69,7 @@ Required before finishing any branch that touches:
 | Window not pinned | Not on top / wrong position after login | KWin rule must match app id `storage-visualizer` |
 | Stale "unavailable" after recovery | Share answers but its pie stays grey for a poll | Release the busy flag and deliver the result under the probe lock (ADR-011) |
 | Free space off vs `df` | Free differs by reserved blocks | Use `f_bavail`, not `f_bfree` |
+| Label shows `\x20` | by-label name not decoded | `decode_udev` (core/labels.py) |
 
 ## Testing Patterns
 
