@@ -13,6 +13,7 @@ class MainWindow(QWidget):
         self.setWindowTitle("Storage")
         self._pies: dict[str, PieWidget] = {}
         self._shown_once = False
+        self._width_owned = False  # set once shown with pies; never resized again after that
         self._layout = FlowLayout(self)
         self._empty = QLabel("No volumes found")  # always last; pies are inserted before it
         self._layout.addWidget(self._empty)
@@ -48,22 +49,25 @@ class MainWindow(QWidget):
         return self.screen().availableGeometry().width()
 
     def _fit_height(self) -> None:
-        """Clamp the height to the wrapped rows; the width is the user's once shown (ADR-013)."""
+        """Clamp the height to the wrapped rows; the width is the user's once shown with pies (ADR-013)."""
         min_w = self._layout.totalMinimumSize().width()
-        if self._shown_once:
+        if self._width_owned:
             target = max(min_w, self.width())
-        else:  # first launch: one row, capped at the screen
+        else:  # first launch, or pies arriving at a window first shown empty: one row
             target = max(min_w, min(self._layout.sizeHint().width(), self._available_width()))
         h = self._layout.totalHeightForWidth(target)
         if (min_w, h, h) != (self.minimumWidth(), self.minimumHeight(), self.maximumHeight()):
             # Not setFixedHeight: it would freeze whatever minimum width is current.
             self.setMinimumSize(min_w, h)
             self.setMaximumHeight(h)  # the guard above ends the resizeEvent loop
-        if not self._shown_once:
+        if not self._width_owned:
             self.resize(target, h)
+            # A label-only width is nobody's choice; one with pies on screen is the user's.
+            self._width_owned = self._shown_once and bool(self._pies)
 
     def showEvent(self, event: QShowEvent) -> None:
         self._shown_once = True
+        self._width_owned = self._width_owned or bool(self._pies)
         super().showEvent(event)
 
     def resizeEvent(self, event: QResizeEvent) -> None:

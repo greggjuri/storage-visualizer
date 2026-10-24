@@ -242,3 +242,9 @@ def test_width_kept_on_mount_change_while_hidden(qtbot):
     w.hide()
     w.set_mounts([mi("/"), mi("/data"), mi("/home")])
     assert w.width() == width_for(w, 1) and w.height() == height_for(w, 3)
+
+
+def test_pies_arriving_after_empty_first_show_get_one_row(qtbot):
+    w = shown_window(qtbot)  # zero mounts at show: the label-only width is nobody's choice
+    w.set_mounts([mi("/"), mi("/data"), mi("/home")])
+    assert w.width() == width_for(w, 3) and w.height() == height_for(w, 1)
