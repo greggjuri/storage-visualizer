@@ -154,18 +154,91 @@ def test_removed_pie_is_hidden_before_deferred_delete(qtbot):
     assert not old.isVisible()  # no event loop turn yet: deleteLater has not run
 
 
-def test_window_grows_immediately_when_pie_added(qtbot):
-    w = MainWindow()
-    qtbot.addWidget(w)
-    w.show()
-    w.set_mounts([mi("/")])
-    before = w.width()
-    w.set_mounts([mi("/"), mi("/home")])
-    assert w.width() > before  # adjustSize sees the new pie without processEvents()
-
-
 def test_new_pie_gets_mount_label(qtbot):
     w = MainWindow()
     qtbot.addWidget(w)
     w.set_mounts([MountInfo("/dev/sda2", "/mnt/hoepsis", "ntfs3", False, "Hoepsis")])
     assert w.pies["/mnt/hoepsis"].label == "Hoepsis"
+
+
+def metrics(w):
+    lay = w.layout()
+    m = lay.contentsMargins()
+    pie = next(iter(w.pies.values()))
+    return pie.width(), pie.height(), max(0, lay.spacing()), m
+
+
+def width_for(w, per_row):
+    pw, _, sp, m = metrics(w)
+    return m.left() + m.right() + per_row * pw + (per_row - 1) * sp
+
+
+def height_for(w, rows):
+    _, ph, sp, m = metrics(w)
+    return m.top() + m.bottom() + rows * ph + (rows - 1) * sp
+
+
+def shown_window(qtbot):
+    w = MainWindow()
+    qtbot.addWidget(w)
+    w.show()
+    return w
+
+
+def test_width_kept_and_height_refits_on_add_and_remove(qtbot):
+    w = shown_window(qtbot)
+    w.set_mounts([mi("/"), mi("/home")])
+    w.resize(width_for(w, 2), w.height())
+    width = w.width()
+    w.set_mounts([mi("/"), mi("/data"), mi("/home")])
+    assert w.width() == width and w.height() == height_for(w, 2)
+    w.set_mounts([mi("/"), mi("/home")])  # removed pie hidden, deleteLater not run yet
+    assert w.width() == width and w.height() == height_for(w, 1)
+
+
+def test_width_change_refits_height(qtbot):
+    w = shown_window(qtbot)
+    w.set_mounts([mi("/"), mi("/data"), mi("/home")])
+    w.resize(width_for(w, 1), w.height())
+    assert w.height() == height_for(w, 3)
+
+
+def test_width_never_below_one_pie(qtbot):
+    w = shown_window(qtbot)
+    w.set_mounts([mi("/"), mi("/home")])
+    w.resize(10, w.height())
+    assert w.width() == width_for(w, 1) and w.height() == height_for(w, 2)
+
+
+def test_clamp_wins_over_stale_height(qtbot):  # offscreen stand-in for a KWin-restored size
+    w = shown_window(qtbot)
+    w.set_mounts([mi("/"), mi("/home")])
+    w.resize(width_for(w, 2), 2000)
+    assert w.height() == height_for(w, 1)
+
+
+def test_first_show_keeps_one_row_width(qtbot):
+    w = MainWindow()
+    qtbot.addWidget(w)
+    w.set_mounts([mi("/"), mi("/data"), mi("/home")])  # before show(), as main() does
+    w.show()
+    assert w.width() == width_for(w, 3) and w.height() == height_for(w, 1)
+
+
+def test_first_launch_width_capped_at_screen(qtbot, monkeypatch):
+    w = MainWindow()
+    qtbot.addWidget(w)
+    w.set_mounts([mi("/")])
+    monkeypatch.setattr(w, "_available_width", lambda: width_for(w, 2))
+    w.set_mounts([mi("/"), mi("/data"), mi("/home")])
+    w.show()
+    assert w.width() == width_for(w, 2) and w.height() == height_for(w, 2)
+
+
+def test_width_kept_on_mount_change_while_hidden(qtbot):
+    w = shown_window(qtbot)
+    w.set_mounts([mi("/"), mi("/home")])
+    w.resize(width_for(w, 1), w.height())
+    w.hide()
+    w.set_mounts([mi("/"), mi("/data"), mi("/home")])
+    assert w.width() == width_for(w, 1) and w.height() == height_for(w, 3)
