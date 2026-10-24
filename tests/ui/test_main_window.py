@@ -248,3 +248,26 @@ def test_pies_arriving_after_empty_first_show_get_one_row(qtbot):
     w = shown_window(qtbot)  # zero mounts at show: the label-only width is nobody's choice
     w.set_mounts([mi("/"), mi("/data"), mi("/home")])
     assert w.width() == width_for(w, 3) and w.height() == height_for(w, 1)
+
+
+def test_min_height_never_exceeds_max_through_grow_and_shrink(qtbot, monkeypatch):
+    w = shown_window(qtbot)
+    w.set_mounts([mi("/")])
+    w.resize(width_for(w, 1), w.height())  # one pie per row: each add/remove changes the height
+    seen = []
+
+    def checked(name):
+        original = getattr(w, name)
+
+        def call(*args):
+            original(*args)
+            seen.append((name, w.minimumHeight(), w.maximumHeight()))
+
+        monkeypatch.setattr(w, name, call)
+
+    checked("setMinimumSize")
+    checked("setMaximumHeight")
+    w.set_mounts([mi("/"), mi("/home")])  # grow
+    w.set_mounts([mi("/")])  # shrink
+    assert len(seen) == 4
+    assert all(lo <= hi for _, lo, hi in seen), seen

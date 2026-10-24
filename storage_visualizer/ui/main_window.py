@@ -39,7 +39,7 @@ class MainWindow(QWidget):
             pie = PieWidget(mp, by_mp[mp].label)
             self._pies[mp] = pie
             self._layout.insertWidget(index, pie)
-            pie.show()  # Qt defers the show; adjustSize would size without the new pie
+            pie.show()  # a never-shown pie is isHidden(); FlowLayout treats it as empty
         self._empty.setVisible(not self._pies)
         if removed or added:
             # Never adjustSize(): it snaps the width to one pie (ADR-013).
@@ -58,8 +58,14 @@ class MainWindow(QWidget):
         h = self._layout.totalHeightForWidth(target)
         if (min_w, h, h) != (self.minimumWidth(), self.minimumHeight(), self.maximumHeight()):
             # Not setFixedHeight: it would freeze whatever minimum width is current.
-            self.setMinimumSize(min_w, h)
-            self.setMaximumHeight(h)  # the guard above ends the resizeEvent loop
+            # Keep min <= max at every step; xdg-shell treats min > max as a protocol error.
+            if h > self.maximumHeight():
+                self.setMaximumHeight(h)
+                self.setMinimumSize(min_w, h)
+            else:
+                self.setMinimumSize(min_w, h)
+                self.setMaximumHeight(h)
+            # The guard above ends the resizeEvent loop.
         if not self._width_owned:
             self.resize(target, h)
             # A label-only width is nobody's choice; one with pies on screen is the user's.
