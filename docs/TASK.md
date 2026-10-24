@@ -6,7 +6,7 @@
 ## Backlog
 ### Phase 2: Desktop integration
 - [ ] Tray icon - show/hide window on click, Quit in the menu
-- [ ] Frameless window - no decorations, drag to move via startSystemMove, stable app id
+- [ ] Frameless window - no decorations, drag to move via startSystemMove, stable app id; without decorations, width changes need Meta+right-drag (Plasma 6 default), the KWin rule, or startSystemResize edges
 - [ ] Install and autostart - pipx entry point, XDG autostart .desktop, README section with the KWin "keep above" rule
 - [ ] Theme-aware text - pie label uses palette().windowText() so it's readable on Breeze Dark
 
