@@ -52,12 +52,12 @@ So MainWindow never calls `adjustSize()` again. It owns the window size through 
 - **`_available_width()`** returns `self.screen().availableGeometry().width()`. A separate method so tests can monkeypatch it.
 - **`_fit_height()`**:
   - Width: if the window has never been shown, `min(self._layout.sizeHint().width(), self._available_width())`, applied with `resize(width, …)`. Once shown, the current `width()`; the app never changes the width after the first show.
-  - Height: `h = self._layout.totalHeightForWidth(width)`; if `h` or the layout's minimum width differ from the window's current limits, `setMinimumSize(layout.minimumSize().width(), h)` and `setMaximumHeight(h)` (minimum = maximum height). Not `setFixedHeight`: it marks the current minimum width as explicit, so Qt would stop updating it from the layout.
+  - Height: `h = self._layout.totalHeightForWidth(width)`; if `h` or the layout's minimum width differ from the window's current limits, `setMinimumSize(layout.totalMinimumSize().width(), h)` and `setMaximumHeight(h)` (minimum = maximum height). Not `setFixedHeight`: it marks the current minimum width as explicit, so Qt would stop updating it from the layout.
 - **Called from**:
   - the end of `set_mounts` when pies were added or removed, replacing `adjustSize()`;
   - `resizeEvent` when the width changed (`event.size().width() != event.oldSize().width()`). The guard on `h` stops the clamp → `resizeEvent` loop.
 - **`pie.show()` stays before `_fit_height()`** in `set_mounts`. A child widget that was never shown is still `isHidden()` until `show()`, so `FlowLayout` would count it as empty and size the window without it.
-- **Why min/max instead of `resize()`**: Equal minimum and maximum heights hand the compositor a minimum and maximum height. During a drag KWin limits the height itself instead of the app correcting it afterwards, and a size forced by a KWin rule (a stale remembered height) is clamped to the fitted height. The minimum width (one pie) is set explicitly from `FlowLayout.minimumSize()`.
+- **Why min/max instead of `resize()`**: Equal minimum and maximum heights hand the compositor a minimum and maximum height. During a drag KWin limits the height itself instead of the app correcting it afterwards, and a size forced by a KWin rule (a stale remembered height) is clamped to the fitted height. The minimum width (one pie) is set explicitly from `layout.totalMinimumSize()`.
 
 ## Error Handling
 

@@ -190,10 +190,10 @@ def test_width_kept_on_mount_change_while_hidden(qtbot):
   - `self._layout = FlowLayout(self)`; `insertWidget`/`removeWidget`/`addWidget` calls unchanged. Add `self._shown_once = False`; set it `True` in `showEvent` (call `super().showEvent(event)`).
   - `_available_width(self) -> int`: `self.screen().availableGeometry().width()`.
   - `_fit_height(self) -> None`, in this order:
-    1. `min_w = self._layout.minimumSize().width()`.
+    1. `min_w = self._layout.totalMinimumSize().width()` (includes the widget's contents margins, matching `totalHeightForWidth`).
     2. Target width: before the first show `max(min_w, min(self._layout.sizeHint().width(), self._available_width()))`; after it `max(min_w, self.width())`.
     3. `h = self._layout.totalHeightForWidth(target)`.
-    4. If `(min_w, h, h) != (self.minimumWidth(), self.minimumHeight(), self.maximumHeight())`: `self.setMinimumSize(min_w, h)` then `self.setMaximumHeight(h)` (the guard ends the `resizeEvent` loop). Do **not** use `setFixedHeight`: it calls `setMinimumSize(minimumWidth(), h)`, which marks the current minimum width as explicit, so Qt's layout would stop updating it and a minimum taken from the label alone would stick. Setting the minimum width from `FlowLayout.minimumSize()` ourselves keeps the spec's rule (the minimum width is one pie) without depending on that.
+    4. If `(min_w, h, h) != (self.minimumWidth(), self.minimumHeight(), self.maximumHeight())`: `self.setMinimumSize(min_w, h)` then `self.setMaximumHeight(h)` (the guard ends the `resizeEvent` loop). Do **not** use `setFixedHeight`: it calls `setMinimumSize(minimumWidth(), h)`, which marks the current minimum width as explicit, so Qt's layout would stop updating it and a minimum taken from the label alone would stick. Setting the minimum width from `totalMinimumSize()` ourselves keeps the spec's rule (the minimum width is one pie) without depending on that.
     5. Before the first show only: `self.resize(target, h)`. After the first show the width is never set; growing the minimum in step 4 is the only thing that can widen a window narrower than one pie.
   - Call `_fit_height()` at the end of `__init__`, at the end of `set_mounts` in place of `adjustSize()` (keep `if removed or added:` and the `pie.show()` comment; replace the "Deliberate: SetFixedSize…" comment with one line: never `adjustSize()`, it snaps the width to one pie, see ADR-013), and in `resizeEvent(self, event)` after `super().resizeEvent(event)` when `event.size().width() != event.oldSize().width()`.
 
