@@ -50,6 +50,10 @@ Required before finishing any branch that touches:
 - [ ] Every pie's label follows the label rules (the Labels bullet under PLANNING.md Volume Rules); `<used> used · <free> free` / `<total> total` match `df -h` Used / Avail / Size exactly; no number is elided
 - [ ] Plug in a USB drive → pie appears within 30 s; unmount → pie disappears
 - [ ] Existing pies don't flicker to "…" on a tick
+- [ ] Drag the width narrower and wider → pies rewrap; the height follows without visible jitter or clipped rows
+- [ ] At a width you chose, plug in or remove a USB drive → the width stays; only the height changes
+- [ ] First launch with more pies than fit the screen → the window is no wider than the screen
+- [ ] Restored size from the KWin rule → the height still fits, even when the remembered height is stale (N/A until the KWin rule exists)
 - [ ] Thread count returns to baseline between polls
 - [ ] Stop the NFS/SMB server → that pie shows "unavailable" within one poll after the probe hangs, the UI stays responsive, and the thread count stays flat over several polls
 - [ ] Tray icon shows/hides the window; tray Quit → clean exit, no traceback (N/A until the tray lands)
