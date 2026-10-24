@@ -9,6 +9,9 @@
 - [ ] Install and autostart - pipx entry point, XDG autostart .desktop, README section with the KWin "keep above" rule
 - [ ] Theme-aware text - pie label uses palette().windowText() so it's readable on Breeze Dark
 
+### Later
+- [ ] Tray icon shows usage — small pie of the fullest volume
+
 ## Done
 - [x] Flow layout - pies wrap to the window's width (FlowLayout, heightForWidth); the width is the user's/KWin's once shown with pies, mount changes and drags only clamp the height (min = max, min <= max at every step); first launch is one row capped at the screen width (ADR-013)
 - [x] Volume labels - network: last path component of the share source (mount point's last component if none); local: by-label name (udev escapes decoded), else mount point's last component; "/" is System. Three lines under each pie: label / "<used> used · <free> free" / "<total> total", formatted like `df -h` (ADR-012: by-label read at enumerate time)
