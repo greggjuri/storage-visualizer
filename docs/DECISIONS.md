@@ -396,6 +396,42 @@ Each pie shows a volume label (spec: `docs/superpowers/specs/2026-10-20-volume-l
 
 ---
 
+## ADR-013: Window height clamped to the flow's heightForWidth; width owned by the user and KWin
+
+**Date**: 2026-10-24
+**Status**: Accepted
+
+### Context
+Pies wrap to the window's width in a `FlowLayout` (heightForWidth). Mount changes used to call `adjustSize()`, but on a heightForWidth window `adjustSize()` sets the width to the layout's `sizeHint()`; with the PySide6 example's `sizeHint() == minimumSize()` that collapses the window to one pie per column and overrides the width the user (later the KWin rule, ADR-006) chose.
+
+### Decision
+- `MainWindow` never calls `adjustSize()`. `_fit_height()` sets minimum height = maximum height = `layout.totalHeightForWidth(width)` and minimum width = `layout.totalMinimumSize().width()` (one pie), on mount changes and on width changes (`resizeEvent`).
+- Not `setFixedHeight`: it calls `setMinimumSize(minimumWidth(), h)`, which marks the current minimum width as explicit, so a label-only minimum width could stick.
+- The limits are changed in an order that keeps min ≤ max height at every step (raise the maximum first when growing, lower the minimum first when shrinking); xdg-shell treats min > max as a protocol error.
+- Width: until the window has been **shown with pies**, `min(one-row sizeHint width, available screen width)`; after that the app never sets the width. A label-only width is nobody's choice.
+
+### Rationale
+- Equal min/max heights let KWin limit the height itself during a drag, and clamp a size a KWin rule restores, instead of the app correcting the size afterwards.
+- The width stays with whoever set it: first launch, the user's drag, or the KWin rule.
+
+### Alternatives Considered
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| Min/max height clamp in MainWindow | Compositor enforces it; stale restored heights clamped | Min/max order must be managed | Accepted |
+| Clamp inside `FlowLayout.setGeometry` | All in one class | Re-entrant: the layout resizes its own parent mid-layout; mixes layout and window sizing | Rejected |
+| `QScrollArea` around the flow | No height management | Hides the problem instead of fitting the content | Rejected |
+| `resize(width(), heightForWidth)` only on mount changes | Simple | Stale heights after a drag or a KWin-restored size | Rejected |
+
+### Consequences
+**Positive:** Mount changes never move the width; drags rewrap and the height follows without jitter (manual check, 2026-10-24).
+**Negative:** The user can't make the window taller or shorter than its content. If you resize an empty window before any pie exists, it snaps back to the label's width.
+
+### References
+- Spec: `docs/superpowers/specs/2026-10-21-flow-layout-design.md`
+- Plan: `docs/superpowers/plans/2026-10-21-flow-layout.md`
+
+---
+
 ## Template for New Decisions
 
 ```markdown
@@ -466,3 +502,4 @@ Create an ADR when:
 1. **core/ has no Qt imports**: all GUI code lives in ui/ (PLANNING.md, Architecture)
 2. **The UI thread never makes calls that can block on a mounted filesystem** (statvfs etc.); reading kernel pseudo-filesystems (/proc, devtmpfs under /dev) is fine. Usage probes run in per-mount workers (ADR-004/011).
 3. **Debian 13 + KDE Plasma 6 Wayland only**: no portability code (ADR-001)
+4. **The app never sets the window's width once it has been shown with pies, and never calls `adjustSize()`**: mount changes only clamp the height (ADR-013).

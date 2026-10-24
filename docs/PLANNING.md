@@ -78,6 +78,7 @@ class Volume:
 - Debian 13 + KDE Plasma 6 Wayland only. No portability code.
 - Wayland: the app cannot position itself or force always-on-top. Both come from a KWin window rule the user sets once, matched on the app id. The app sets a stable app id (`QGuiApplication.setDesktopFileName("storage-visualizer")`).
 - A hung network mount must never block the UI thread or stack up threads (ADR-004, ADR-011).
+- Window sizing: pies wrap in a `FlowLayout`; the width belongs to the user/KWin once the window has been shown with pies, and the app only clamps the height to the wrapped rows (min = max height). Never `adjustSize()` (ADR-013).
 - Max 500 lines per file
 - Conventional commits
 
